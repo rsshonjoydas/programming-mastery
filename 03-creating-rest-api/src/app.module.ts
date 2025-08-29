@@ -6,6 +6,7 @@ import { AppService } from '@/app.service';
 import { TypedConfigService } from '@/common/config/config.service';
 import { appConfig } from '@/common/config/configuration';
 import { validateEnvironment } from '@/common/config/env.validation';
+import { SongsModule } from '@/modules/songs/songs.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { validateEnvironment } from '@/common/config/env.validation';
       validate: validateEnvironment,
     }),
     // ... other modules
+    SongsModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
