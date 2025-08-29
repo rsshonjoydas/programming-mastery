@@ -1,253 +1,413 @@
-# NestJS Fundamentals
+# Basic Configuration Setup
 
-A comprehensive guide to creating, structuring, and understanding NestJS applications with best practices.
+This guide covers setting up basic environment configuration with Node environment, port, and logging settings.
 
-## 🌟 What is NestJS?
+## 📋 Prerequisites
 
-NestJS is a progressive Node.js framework for building efficient, reliable, and scalable server-side applications. It uses TypeScript by default and combines elements of:
+- `NestJS` application
+- Zod for validation
+- @nestjs/config module
+- cross-env for environment variables across different operating systems
 
-- **OOP** (Object Oriented Programming)
-- **FP** (Functional Programming)
-- **FRP** (Functional Reactive Programming)
+## 🚀 Initial Setup
 
-## 🚀 Installation & Setup
-
-### Prerequisites
-
-```bash
-# Install Node.js (version 16 or higher)
-# Install npm, yarn, or pnpm
-```
-
-### Global CLI Installation
+### 1. Install Dependencies
 
 ```bash
-npm i -g @nestjs/cli
-# or
-yarn global add @nestjs/cli
+pnpm i @nestjs/config zod; pnpm i -D cross-env
 ```
 
-## 🎯 Project Creation
+### 2. Create Basic Environment Files
 
-### Step 1: Create New Project
+Create these files in your project root:
 
 ```bash
-# Create new project with name my-nestjs-app
-nest new my-nestjs-app
-
-# Create new project in this folder
-nest new .
-
-# With specific package manager
-nest new my-nestjs-app --package-manager npm
-nest new my-nestjs-app --package-manager yarn
-nest new my-nestjs-app --package-manager pnpm
-
-# Skip Git initialization
-nest new my-nestjs-app --skip-git
-
-# Skip package installation
-nest new my-nestjs-app --skip-install
+touch .env .env.development .env.production .env.test
 ```
 
-### Step 2: Navigate to Project
-
-```bash
-cd my-nestjs-app
-```
-
-## 📂 File Structure Overview
-
-### Initial Project Structure
-
-After running `nest new`, you'll get this basic structure:
+**Add to `.gitignore`:**
 
 ```text
-my-nestjs-app/
-├── src/                          # 📂 Source code
-│   ├── app.controller.spec.ts    # 🧪 Unit tests for controller
-│   ├── app.controller.ts         # 🎮 HTTP request handlers
-│   ├── app.module.ts             # 🏗️ Root module (app structure)
-│   ├── app.service.ts            # 🔧 Business logic
-│   └── main.ts                   # 🚀 Application entry point
-├── test/                         # 🧪 End-to-end tests
-│   ├── app.e2e-spec.ts          # E2E test file
-│   └── jest-e2e.json            # E2E test configuration
-├── node_modules/                 # 📦 Dependencies (auto-generated)
-├── dist/                         # 📁 Compiled JavaScript (after build)
-├── .eslintrc.js                  # 📏 ESLint configuration
-├── .gitignore                    # 🚫 Git ignore patterns
-├── .prettierrc                   # 💅 Code formatting rules
-├── nest-cli.json                 # ⚙️ Nest CLI configuration
-├── package.json                  # 📋 Project dependencies & scripts
-├── package-lock.json             # 🔒 Exact dependency versions
-├── README.md                     # 📖 Project documentation
-├── tsconfig.build.json           # 🔨 TypeScript build config
-└── tsconfig.json                 # 📝 TypeScript configuration
+.env*
+!.env.example
 ```
 
-## 📊 File Connections Diagram
+## 📁 File Structure
 
-```mermaid
-%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor': '#ff6b6b', 'primaryTextColor': '#fff', 'primaryBorderColor': '#ff6b6b', 'lineColor': '#4ecdc4', 'secondaryColor': '#45b7d1', 'tertiaryColor': '#96ceb4'}}}%%
-graph TD
-    %% Entry Point
-    A[main.ts<br/>🚀 Entry Point] -->|bootstraps| B[app.module.ts<br/>🏗️ Root Module]
-
-    %% Module connections
-    B -->|imports| C[Common Modules<br/>📦 Built-in NestJS]
-    B -->|controllers| D[app.controller.ts<br/>🎮 HTTP Handlers]
-    B -->|providers| E[app.service.ts<br/>🔧 Business Logic]
-
-    %% Controller-Service relationship
-    D -->|injects & uses| E
-
-    %% Testing connections
-    F[app.controller.spec.ts<br/>🧪 Unit Tests] -->|tests| D
-    F -->|mocks| E
-    G[app.e2e-spec.ts<br/>🔍 E2E Tests] -->|tests entire| A
-
-    %% Configuration files
-    H[package.json<br/>📋 Dependencies] -->|defines scripts for| A
-    I[tsconfig.json<br/>📝 TS Config] -->|compiles| A
-    J[nest-cli.json<br/>⚙️ CLI Config] -->|configures| K[NestJS CLI<br/>🛠️ Development]
-
-    %% Build process
-    I -->|compiles to| L[dist/<br/>📁 Compiled JS]
-
-    %% Development tools
-    M[.eslintrc.js<br/>📏 Linting] -->|validates| A
-    N[.prettierrc<br/>💅 Formatting] -->|formats| A
-
-    %% Styling for better readability
-    classDef entryPoint fill:#ff6b6b,stroke:#fff,stroke-width:3px,color:#fff
-    classDef module fill:#45b7d1,stroke:#fff,stroke-width:2px,color:#fff
-    classDef service fill:#96ceb4,stroke:#fff,stroke-width:2px,color:#333
-    classDef controller fill:#feca57,stroke:#fff,stroke-width:2px,color:#333
-    classDef test fill:#ff9ff3,stroke:#fff,stroke-width:2px,color:#333
-    classDef config fill:#54a0ff,stroke:#fff,stroke-width:2px,color:#fff
-    classDef build fill:#5f27cd,stroke:#fff,stroke-width:2px,color:#fff
-
-    class A entryPoint
-    class B module
-    class E service
-    class D controller
-    class F,G test
-    class H,I,J,M,N config
-    class L,K build
-
+```text
+src/
+├── common/
+│  └── config/
+│       ├── env.validation.ts
+│       ├── configuration.ts
+│       └── config.service.ts
+├── app.module.ts
+└── main.ts
 ```
 
-## 📝 File-by-File Explanation
+## 📄 Implementation
 
-### 🚀 `src/main.ts` - Application Entry Point
+### 1. Environment Validation (`env.validation.ts`)
 
 ```tsx
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { z } from 'zod';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(3000);
+const environmentSchema = z.object({
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
+  PORT: z
+    .string()
+    .default('3000')
+    .transform(Number)
+    .pipe(z.number().min(1000).max(65535)),
+  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
+});
+
+export type EnvironmentVariables = z.infer<typeof environmentSchema>;
+
+export function validateEnvironment(config: Record<string, unknown>) {
+  const result = environmentSchema.safeParse(config);
+
+  if (!result.success) {
+    const errors = result.error.issues
+      .map((err) => `${err.path.join('.')}: ${err.message}`)
+      .join('\n');
+
+    throw new Error(`Environment validation failed:\n${errors}`);
+  }
+
+  return result.data;
 }
-bootstrap();
 ```
 
-**Purpose:**
+### 2. Configuration (`configuration.ts`)
 
-- **Entry point** of your entire application
-- Creates the NestJS application instance
-- Starts the HTTP server on port 3000
-- **Bootstraps** the root module (`AppModule`)
+```tsx
+import { registerAs } from '@nestjs/config';
 
-### 🏗️ `src/app.module.ts` - Root Module
+export const appConfig = registerAs(
+  'app',
+  (): AppConfiguration => ({
+    env: process.env.NODE_ENV as 'development' | 'production' | 'test',
+    port: parseInt(`${process.env.PORT}`, 10) || 3000,
+    isDevelopment: process.env.NODE_ENV === 'development',
+    isProduction: process.env.NODE_ENV === 'production',
+    isTest: process.env.NODE_ENV === 'test',
+    logLevel: (process.env.LOG_LEVEL as LogLevel) || 'info',
+  }),
+);
+
+// Type definitions
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+
+export interface AppConfiguration {
+  env: 'development' | 'production' | 'test';
+  port: number;
+  isDevelopment: boolean;
+  isProduction: boolean;
+  isTest: boolean;
+  logLevel: LogLevel;
+}
+```
+
+### 3. Typed Configuration Service (`config.service.ts`)
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+import { AppConfiguration, LogLevel } from './configuration';
+
+@Injectable()
+export class TypedConfigService {
+  constructor(private configService: ConfigService) {}
+
+  get app(): AppConfiguration {
+    return this.configService.get<AppConfiguration>('app')!;
+  }
+
+  get logLevel(): LogLevel {
+    return this.app.logLevel;
+  }
+
+  // Environment utility methods
+  isDevelopment(): boolean {
+    return this.app.isDevelopment;
+  }
+
+  isProduction(): boolean {
+    return this.app.isProduction;
+  }
+
+  isTest(): boolean {
+    return this.app.isTest;
+  }
+
+  getPort(): number {
+    return this.app.port;
+  }
+
+  // Logging utility methods
+  shouldLog(level: LogLevel): boolean {
+    const levels: Record<LogLevel, number> = {
+      error: 0,
+      warn: 1,
+      info: 2,
+      debug: 3,
+    };
+
+    const currentLevel = levels[this.logLevel];
+    const targetLevel = levels[level];
+
+    return targetLevel <= currentLevel;
+  }
+}
+```
+
+### 4. App Module (`app.module.ts`)
 
 ```tsx
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule } from '@nestjs/config';
+import { validateEnvironment } from './config/env.validation';
+import { appConfig } from './config/configuration';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      expandVariables: true,
+      envFilePath: ['.env.local', `.env.${process.env.NODE_ENV}`, '.env'],
+      load: [appConfig],
+      validate: validateEnvironment,
+    }),
+    // ... other modules
+  ],
+  providers: [TypedConfigService], // Add this if you want to inject it
 })
 export class AppModule {}
 ```
 
-**Purpose:**
-
-- **Root module** that organizes your entire application
-- Defines the application structure
-- **Central hub** that connects controllers and services
-
-### 🎮 `src/app.controller.ts` - HTTP Request Handler
+### 5. Main Application (`main.ts`)
 
 ```tsx
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import { NestFactory } from '@nestjs/core';
 
-@Controller()
-export class AppController {
-  constructor(private readonly appService: AppService) {}
+import { AppModule } from '@/app.module';
+import { TypedConfigService } from '@/common/config/config.service';
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // Get typed config service
+  const configService = app.get(TypedConfigService);
+
+  const port = configService.getPort();
+  await app.listen(port);
+
+  if (configService.isDevelopment()) {
+    console.log(`🚀 Application is running on: http://localhost:${port}`);
+    console.log(`📝 Environment: ${configService.app.env}`);
+    console.log(`📊 Log Level: ${configService.logLevel}`);
   }
 }
+bootstrap();
 ```
 
-**Purpose:**
+## 🔧 Environment Variables
 
-- Handles **incoming HTTP requests**
-- Defines **API endpoints** (routes)
-- **Delegates business logic** to services
+### `.env` File
 
-### 🔧 `src/app.service.ts` - Business Logic
+```text
+# Application Environment
+NODE_ENV=development
+
+# Server Configuration
+PORT=3000
+
+# Logging Configuration
+LOG_LEVEL=info
+```
+
+### Environment Examples
+
+### `.env.development`
+
+```text
+NODE_ENV=development
+PORT=3000
+LOG_LEVEL=debug
+```
+
+### `.env.production`
+
+```text
+NODE_ENV=production
+PORT=8080
+LOG_LEVEL=warn
+```
+
+### `.env.test`
+
+```text
+NODE_ENV=test
+PORT=3001
+LOG_LEVEL=error
+```
+
+## 📊 Usage Examples
+
+### Using Configuration in Services
 
 ```tsx
-import { Injectable } from '@nestjs/common';
-
 @Injectable()
-export class AppService {
-  getHello(): string {
-    return 'Hello World!';
-  }
-}
-```
+export class SomeService {
+  constructor(private configService: TypedConfigService) {}
 
-**Purpose:**
+  someMethod() {
+    const port = this.configService.getPort();
+    const isDev = this.configService.isDevelopment();
+    const logLevel = this.configService.logLevel;
 
-- Contains **business logic**
-- Reusable across multiple controllers
-- **Single responsibility** - does one thing well
-
-## Path Mapping Configuration
-
-Add path mapping to your `tsconfig.json` for cleaner imports:
-
-```json
-{
-  "compilerOptions": {
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["src/*"],
-      "@/common/*": ["src/common/*"],
-      "@/modules/*": ["src/modules/*"],
-      "@/libs/*": ["src/libs/*"],
-      "@/shared/*": ["src/shared/*"]
+    if (this.configService.shouldLog('debug')) {
+      console.log('Debug information');
     }
   }
 }
 ```
 
-Then use clean imports:
+### Conditional Logic Based on Environment
 
 ```tsx
-// Instead of: import { UserEntity } from '../../../database/entities/user.entity';
-import { UserEntity } from '@/database/entities/user.entity';
+@Injectable()
+export class DatabaseService {
+  constructor(private configService: TypedConfigService) {}
 
-// Instead of: import { ApiResponse } from '../../common/interfaces/api-response';
-import { ApiResponse } from '@/common/interfaces/api-response';
+  getConnectionOptions() {
+    if (this.configService.isProduction()) {
+      return {
+        // Production database config
+        ssl: true,
+        logging: false,
+      };
+    }
+
+    return {
+      // Development database config
+      ssl: false,
+      logging: true,
+    };
+  }
+}
 ```
+
+## 📋 `Package.json` Scripts
+
+Add these scripts to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "start": "nest start",
+    "start:dev": "cross-env NODE_ENV=development nest start --watch",
+    "start:debug": "cross-env NODE_ENV=development nest start --debug --watch",
+    "start:prod": "cross-env NODE_ENV=production node dist/main",
+    "test": "cross-env NODE_ENV=test jest",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:cov": "cross-env NODE_ENV=test jest --coverage",
+    "test:debug": "cross-env NODE_ENV=test node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "cross-env NODE_ENV=test jest --config ./test/jest-e2e.json"
+  }
+}
+```
+
+## 🔍 Validation Features
+
+- **PORT**: Must be between 1000-65535
+- **NODE_ENV**: Only accepts 'development', 'production', or 'test'
+- **LOG_LEVEL**: Only accepts 'error', 'warn', 'info', or 'debug'
+- **Type Safety**: Full TypeScript support with proper typing
+- **Default Values**: Sensible defaults for all configurations
+
+## 🚨 Error Handling
+
+The configuration will throw descriptive errors if validation fails:
+
+```text
+Environment validation failed:
+PORT: Expected number, received string
+LOG_LEVEL: Invalid enum value. Expected 'error' | 'warn' | 'info' | 'debug', received 'invalid'
+```
+
+## ✅ Best Practices
+
+### Security
+
+- Never commit `.env.local` files
+- Use strong, unique secrets for each environment
+- Keep production credentials separate from development
+- Use environment variables in CI/CD instead of `.env.production`
+
+### Organization
+
+- Group related variables together in schemas
+- Use descriptive variable names
+- Set sensible defaults where appropriate
+- Validate all required environment variables
+
+### Development
+
+- Use different database names for each environment
+- Enable detailed logging in development
+- Disable synchronization in production
+- Use feature flags for environment-specific behavior
+
+### Example Environment File Structure
+
+```text
+project/
+├── .env                 # Shared defaults
+├── .env.development     # Development overrides
+├── .env.production      # Production overrides
+├── .env.test            # Test overrides
+├── .env.local           # Local overrides (gitignored)
+└── .env.example         # Template for team members
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**1. Environment validation failed error:**
+
+- Check that all required environment variables are set
+- Verify variable names match exactly (case-sensitive)
+- Ensure numeric values are valid numbers
+
+**2. Type undefined is not assignable to type X:**
+
+- Add `!` after `configService.get()` calls
+- Or use `getOrThrow()` method for explicit error handling
+
+**3. Environment files not loading:**
+
+- Check file names are exactly `.env.development` (not `.env.dev`)
+- Ensure `NODE_ENV` is set correctly
+- Verify file paths in `envFilePath` array
+
+**4. Variables not updating:**
+
+- Restart your application after changing `.env` files
+- Check if caching is enabled and clear if needed
+- Verify environment variable precedence
+
+## 📈 Benefits
+
+- **Type Safety**: Full TypeScript support
+- **Validation**: Runtime validation of environment variables
+- **Default Values**: Fallbacks for missing configuration
+- **Environment Aware**: Easy environment-specific logic
+- **Centralized**: Single source of truth for configuration
+- **Extensible**: Easy to add new configuration options
