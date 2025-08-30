@@ -214,3 +214,15 @@ Transform Param using `ParseInt` is a feature in `NestJS` that allows for easy t
 - Sending a request to <http://localhost:3000/songs/1> will result in logging the type of id as a number. This showcases `NestJS`’s ability to utilize pipes for transformation tasks, an area where it holds an edge over frameworks like Express, which necessitate separate middleware for such operations.
 - The error status code can also be provided to `ParseIntPipe`. Should a string value be provided, an error will be generated. This approach lends itself to better error handling in `NestJS` compared to the more manual error-checking methods required in Express.
 - Sending a request to <http://localhost:3000/songs/abc> will produce an error message stating “not acceptable.” In frameworks like Express, validation logic for handling such errors would generally need to be written explicitly, whereas `NestJS` allows for more configurable and built-in validation mechanisms. This feature aligns with best practices for maintainability and scalability.
+
+### **Validating the input parameters**
+
+To validate request parameters, class-validator is often used in `NestJS`. Installing two required packages initiates this feature, making validation an integral part of the request-handling process, unlike in Express where validation logic might be manually coded or pulled in via additional middleware.
+
+Utilizing class-validator in `NestJS` allows for declarative validation rules in `DTO (Data Transfer Object)` classes using various decorators such as `@IsString()` or `@IsNotEmpty()` and many more. This approach promotes reusability and maintainability of validation logic, aligning with best practices for scalable application architecture, whereas in Express, separate validation libraries like `validator` or `express-validator` are often needed.
+
+- **Install two packages**
+
+  ```bash
+  pnpm i class-transformer class-validator
+  ```
