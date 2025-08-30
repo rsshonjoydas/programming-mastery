@@ -226,3 +226,27 @@ Utilizing class-validator in `NestJS` allows for declarative validation rules in
   ```bash
   pnpm i class-transformer class-validator
   ```
+
+### **Global Scope pipes**
+
+The next action involves binding the `ValidationPipe` from the `@nestjs/common` package. This feature provides an advantage over frameworks like Express, where validation often necessitates additional libraries or custom middleware. In `NestJS`, pipes offer multiple scopes for validation: `parameter-scoped`, `method-scoped`, `controller-scoped`, or `global-scoped`, lending greater flexibility and modularity to the application.
+
+Opting for a global scope requires registration in the `main.ts` file. This is a best practice for ensuring application-wide consistency in validation, as it minimizes the chances of missing validation logic in any part of the application. Unlike Express, which would require a global middleware function for similar functionality, `NestJS` makes it straightforward to set global validation rules.
+
+`main.ts`
+
+```ts
+import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // Global validation pipe
+  app.useGlobalPipes(new ValidationPipe());
+
+  await app.listen(3000);
+}
+bootstrap();
+```
