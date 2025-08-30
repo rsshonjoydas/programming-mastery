@@ -204,3 +204,63 @@ export class AppService {
 ```
 
 The `DevConfigService` has been injected into `AppService`, and the `getDBHOST` method from `DevConfigService` is invoked. Unlike in Express, where dependency injection is not natively supported and might require third-party libraries, `NestJS` simplifies this with built-in Dependency Injection, leading to more modular and testable code. As a best practice, environment-specific configurations like database host details should be abstracted away into separate configuration services, ensuring that the code adheres to the Twelve-Factor App methodology.
+
+### **Non-service Providers**
+
+These are providers that aren’t necessarily tied to a service and may provide utility functions, for example. This granularity is generally not available in basic Express setups and would usually require additional modules or utilities. Incorporating non-service providers can aid in keeping the codebase DRY (Don’t Repeat Yourself).
+
+A provider in `NestJS` has the flexibility to supply any value, making it a versatile component for dependency injection. The `useFactory` syntax facilitates the dynamic creation of providers, a feature that sets it apart from Express, which often relies on external libraries like `awilix` or manual constructor injection for similar functionality. As a best practice, isolating complex business logic within factory providers can lead to more modular and testable code.
+
+`app.module.ts`
+
+```tsx
+const devConfig = {
+  port: 3000,
+};
+
+const proConfig = {
+  port: 4000,
+};
+
+@Module({
+  imports: [SongsModule],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    {
+      provide: DevConfigService,
+      useClass: DevConfigService,
+    },
+    {
+      provide: 'CONFIG',
+      useFactory: () => {
+        return process.env.NODE_ENV === 'development' ? devConfig : proConfig;
+      },
+    },
+  ],
+})
+```
+
+Two objects, `devConfig` and `proConfig`, have been created. Dynamic value assignment is possible through the `useFactory` function. Unlike Express, where environment-specific configurations often require separate JSON or JS files, `NestJS` allows for more streamlined, inline dynamic configuration. As a best practice, isolating configuration logic in dedicated modules or services fosters maintainability and scalability.
+
+`app.service.ts`
+
+```tsx
+@Injectable()
+export class AppService {
+  constructor(
+    private devConfigService: DevConfigService,
+    @Inject('CONFIG')
+    private config: { port: string },
+  ) {}
+  getHello(): string {
+    return `Hello I am learning Nest.js Fundamentals ${this.devConfigService.getDB_HOST()} PORT = ${this.config.port}`;
+  }
+}
+```
+
+I have injected the `CONFIG` provider inside the `AppService`.
+
+Exploration of all six techniques will take place, each elucidated through an example.
+
+We are going to play around with all these 6 techniques. I will explain each technique with the help of an example

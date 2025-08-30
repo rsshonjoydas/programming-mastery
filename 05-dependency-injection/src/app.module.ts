@@ -11,6 +11,14 @@ import { SongsController } from '@/modules/songs/songs.controller';
 import { SongsModule } from '@/modules/songs/songs.module';
 import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
 
+const devConfig = {
+  port: 3000,
+};
+
+const proConfig = {
+  port: 4000,
+};
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -31,6 +39,12 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
     {
       provide: DevConfigService,
       useClass: DevConfigService,
+    },
+    {
+      provide: 'CONFIG',
+      useFactory: () => {
+        return process.env.NODE_ENV === 'development' ? devConfig : proConfig;
+      },
     },
   ],
 })
