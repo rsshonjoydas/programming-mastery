@@ -1,16 +1,17 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { TypedConfigService } from '@/common/config/config.service';
 import { appConfig } from '@/common/config/configuration';
 import { validateEnvironment } from '@/common/config/env.validation';
+import { Song } from '@/modules/songs/song.entity';
 import { SongsController } from '@/modules/songs/songs.controller';
 import { SongsModule } from '@/modules/songs/songs.module';
 import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { DataSource } from 'typeorm';
         username: configService.get<string>('POSTGRES_USER'),
         password: configService.get<string>('POSTGRES_PASSWORD'),
         database: configService.get<string>('POSTGRES_DB'),
-        entities: [],
+        entities: [Song],
         synchronize: true, // Warning: Use only in development
       }),
       inject: [ConfigService],
