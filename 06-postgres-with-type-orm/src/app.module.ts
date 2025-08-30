@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
@@ -9,6 +9,8 @@ import { validateEnvironment } from '@/common/config/env.validation';
 import { SongsController } from '@/modules/songs/songs.controller';
 import { SongsModule } from '@/modules/songs/songs.module';
 import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Module({
   imports: [
@@ -21,6 +23,21 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
       validate: validateEnvironment,
     }),
 
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('POSTGRES_HOST'),
+        port: configService.get<number>('POSTGRES_PORT'),
+        username: configService.get<string>('POSTGRES_USER'),
+        password: configService.get<string>('POSTGRES_PASSWORD'),
+        database: configService.get<string>('POSTGRES_DB'),
+        entities: [],
+        synchronize: true, // Warning: Use only in development
+      }),
+      inject: [ConfigService],
+    }),
+
     // ... other modules
     SongsModule,
   ],
@@ -28,6 +45,10 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
   providers: [AppService, TypedConfigService],
 })
 export class AppModule implements NestModule {
+  constructor(private dataSource: DataSource) {
+    console.log(dataSource.driver.database);
+  }
+
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggerMiddleware).forRoutes(SongsController);
   }
