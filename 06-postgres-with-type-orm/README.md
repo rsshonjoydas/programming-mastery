@@ -293,3 +293,24 @@ You can find the record by id by using `findOneBy()` from the `songsRepository`.
   return this.songsService.findOne(id);
 }
 ```
+
+### **Delete Record**
+
+`songs.service.ts`
+
+```tsx
+async remove(id: number): Promise<DeleteResult> {
+  return await this.songRepository.delete(id);
+}
+```
+
+`songRepository` provides the `delete` method to delete the record based on `id`.
+
+`songs.controller.ts`
+
+```tsx
+@Delete(':id')
+delete(@Param('id', ParseIntPipe) id: number): Promise<DeleteResult> {
+  return this.songsService.remove(id);
+}
+```

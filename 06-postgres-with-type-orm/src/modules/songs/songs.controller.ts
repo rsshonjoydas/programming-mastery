@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpException,
   HttpStatus,
@@ -9,6 +10,7 @@ import {
   Post,
 } from '@nestjs/common';
 
+import { DeleteResult } from 'typeorm';
 import { CreateSongDTO } from './dto/create-song.dto';
 import { Song } from './song.entity';
 import { SongsService } from './songs.service';
@@ -38,5 +40,10 @@ export class SongsController {
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number): Promise<Song> {
     return this.songsService.findOne(id);
+  }
+
+  @Delete(':id')
+  delete(@Param('id', ParseIntPipe) id: number): Promise<DeleteResult> {
+    return this.songsService.remove(id);
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 
 import { CreateSongDTO } from './dto/create-song.dto';
 import { Song } from './song.entity';
@@ -37,5 +37,9 @@ export class SongsService {
       throw new NotFoundException(`Song with ID ${id} not found`);
     }
     return song;
+  }
+
+  async remove(id: number): Promise<DeleteResult> {
+    return await this.songRepository.delete(id);
   }
 }
