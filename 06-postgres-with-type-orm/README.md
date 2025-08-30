@@ -149,3 +149,42 @@ entities: [Song],
 ### **Test the Application**
 
 Upon running the application, the songs table appears in the n-test database. These fields materialize automatically, an outcome facilitated by `NestJS`’s integration with `TypeORM`, which handles database migrations and schema synchronization. A best practice involves leveraging `NestJS`’s built-in Dependency Injection system for all database interactions, ensuring a modular and testable codebase.
+
+## **Create and Fetch Records from DB**
+
+### **Repository Pattern**
+
+`TypeORM` supports the repository design pattern, so each entity has its own repository. In `NestJS`, this adherence to the repository pattern facilitates cleaner, more modular code by separating the database logic from business logic, aligning with software engineering best practices.
+
+These repositories can be obtained from the database data source. In a `NestJS` application, you usually inject these repositories into your services or controllers via Dependency Injection, enabling direct interaction with the database through methods like `find`, `save`, or `delete`.
+
+`songs.module.ts`
+
+```tsx
+@Module({
+  imports: [TypeOrmModule.forFeature([Song])],
+  controllers: [SongsController],
+  providers: [SongsService],
+})
+```
+
+To use the `SongRepository` we need to import the `TypeORM` module into the `songs.module.ts` file. This module uses the `forFeature()` method to define which repositories are registered in the current scope. With that in place, we can inject the `SongRepository` into the `SongService` using the `@InjectRepository()` decorator:
+
+`songs.service.ts`
+
+```tsx
+import { InjectRepository } from '@nestjs/typeorm';
+
+import { Song } from './song.entity';
+
+@Injectable()
+export class SongsService {
+  constructor(
+    @InjectRepository(Song)
+    private songRepository: Repository<Song>,
+  ) {}
+  // previous code...
+}
+```
+
+`SongRepository` provides `CRUD` methods to create, delete, update, and fetch records from the Songs table. In a `NestJS` application, this specialized repository is responsible for handling all operations related to the Songs entity, abstracting the database interactions and thus adhering to the repository best practice.

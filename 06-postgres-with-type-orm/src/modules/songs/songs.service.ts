@@ -1,7 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
+import { Song } from './song.entity';
 
 @Injectable()
 export class SongsService {
+  constructor(
+    @InjectRepository(Song)
+    private songRepository: Repository<Song>,
+  ) {}
+
   // local database -> array
   private readonly songs: unknown[] = [];
 
