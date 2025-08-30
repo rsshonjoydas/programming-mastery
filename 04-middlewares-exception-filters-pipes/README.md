@@ -250,3 +250,104 @@ async function bootstrap() {
 }
 bootstrap();
 ```
+
+## DTO(Data Transfer Object)
+
+### What is DTO in `NestJS`?
+
+**DTO (Data Transfer Object)** is a design pattern used in `NestJS` to define the structure and validation rules for data that travels between different layers of your application, particularly for API requests and responses.
+
+### Key Purpose of DTOs
+
+DTOs serve as a **blueprint** or **contract** that defines:
+
+- What data should be sent over the network
+- How that data should be structured
+- What validation rules must be applied
+- Type safety for your application
+
+### Why Use DTOs in `NestJS`?
+
+**1. Input Validation:**
+
+DTOs work with validation pipes to automatically validate incoming data:
+
+`create-song.dto.ts`
+
+```tsx
+import {
+  IsArray,
+  IsDateString,
+  IsMilitaryTime,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+
+export class CreateSongDTO {
+  @IsString()
+  @IsNotEmpty()
+  readonly title: string;
+
+  @IsNotEmpty()
+  @IsArray()
+  @IsString({ each: true })
+  readonly artists: string[];
+
+  @IsNotEmpty()
+  @IsDateString()
+  readonly releasedDate: Date;
+
+  @IsMilitaryTime()
+  @IsNotEmpty()
+  readonly duration: Date;
+
+  @IsString()
+  @IsOptional()
+  readonly lyrics: string;
+}
+```
+
+**2. Type Safety:**
+
+DTOs provide TypeScript type checking throughout your application:
+
+`songs.controller.ts`
+
+```tsx
+@Post()
+create(@Body() createSongDTO: CreateSongDTO) {
+  // TypeScript knows exactly what properties are available
+  return this.songsService.create(createSongDTO);
+}
+```
+
+**3. API Documentation:**
+
+DTOs automatically generate API documentation and help other developers understand expected data structure.
+
+### DTO vs Interface vs Entity
+
+| Aspect         | DTO                        | Interface          | Entity               |
+| -------------- | -------------------------- | ------------------ | -------------------- |
+| **Purpose**    | Data validation & transfer | Type checking only | Database mapping     |
+| **Runtime**    | Available at runtime       | Compiled away      | Available at runtime |
+| **Validation** | ✅ Yes (with decorators)   | ❌ No              | ❌ No                |
+| **Use Case**   | API input/output           | Type definitions   | Database operations  |
+
+### How DTOs Work in Request Flow
+
+1. **Client sends request** with `JSON` data
+2. **`ValidationPipe`** uses `DTO` to validate the data
+3. **If valid**: Data passes to controller method
+4. **If invalid**: Automatic error response sent back
+
+`songs.controller.ts`
+
+```tsx
+@Post()
+create(@Body() createSongDTO: CreateSongDTO): Promise<Song> {
+  // Data is already validated by this point
+  return this.songsService.create(createSongDTO);
+}
+```

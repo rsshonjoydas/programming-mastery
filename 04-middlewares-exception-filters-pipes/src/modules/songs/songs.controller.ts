@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpException,
@@ -8,15 +9,23 @@ import {
   Post,
 } from '@nestjs/common';
 
+import { CreateSongDTO } from './dto/create-song.dto';
 import { SongsService } from './songs.service';
 
 @Controller('songs')
 export class SongsController {
   constructor(private songsService: SongsService) {}
 
+  // @Post()
+  // create() {
+  //   return this.songsService.create('Animals by Martin Garrix');
+  // }
+
+  // create song with dto validation
   @Post()
-  create() {
-    return this.songsService.create('Animals by Martin Garrix');
+  create(@Body() createSongDTO: CreateSongDTO) {
+    // TypeScript knows exactly what properties are available
+    return this.songsService.create(createSongDTO);
   }
 
   @Get()
