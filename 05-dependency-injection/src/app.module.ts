@@ -6,6 +6,7 @@ import { AppService } from '@/app.service';
 import { TypedConfigService } from '@/common/config/config.service';
 import { appConfig } from '@/common/config/configuration';
 import { validateEnvironment } from '@/common/config/env.validation';
+import { DevConfigService } from '@/common/providers/DevConfigService';
 import { SongsController } from '@/modules/songs/songs.controller';
 import { SongsModule } from '@/modules/songs/songs.module';
 import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
@@ -24,7 +25,14 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
     SongsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, TypedConfigService],
+  providers: [
+    AppService,
+    TypedConfigService,
+    {
+      provide: DevConfigService,
+      useClass: DevConfigService,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

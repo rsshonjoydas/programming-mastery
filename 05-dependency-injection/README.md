@@ -147,3 +147,60 @@ export class SongsController {
 ```
 
 I have injected this connection object into `SongsService` or `SongsController` by using the `@Inject` decorator with the token name `CONNECTION`
+
+### **Class Providers:** `useClass`
+
+These allow for the substitution of one class provider with another, providing polymorphism. This is distinct from Express, where such abstraction might require more manual factory patterns. Employing `useClass`is beneficial for achieving code reusability and flexibility.
+
+`app.module.ts`
+
+```tsx
+@Module({
+  imports: [SongsModule],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    {
+      provide: DevConfigService,
+      useClass: DevConfigService,
+    },
+  ],
+})
+```
+
+A `DevConfigService` class has been created and registered as a provider. With this setup, `AppModule` is capable of injecting this provider as a dependency into any class for utilization. In contrast to Express, which typically relies on third-party libraries like `dotenv`for configuration management, `NestJS` offers a more integrated way to handle configurations through custom service providers. As a best practice, encapsulating configuration logic within a dedicated service class enables easier testing and maintenance, adhering to the principle of Separation of Concerns.
+
+Make a `DevConfigService.ts` file inside `src/common/providers/` this directory
+
+`DevConfigService.ts`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class DevConfigService {
+  DB_HOST = 'localhost';
+  getDB_HOST() {
+    return this.DB_HOST;
+  }
+}
+```
+
+Inject `DevConfigService` in `AppService`
+
+`app.service.ts`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { DevConfigService } from './common/providers/DevConfigService';
+
+@Injectable()
+export class AppService {
+  constructor(private devConfigService: DevConfigService) {}
+  getHello(): string {
+    return `Hello I am learning Nest.js Fundamentals ${this.devConfigService.getDB_HOST()}`;
+  }
+}
+```
+
+The `DevConfigService` has been injected into `AppService`, and the `getDBHOST` method from `DevConfigService` is invoked. Unlike in Express, where dependency injection is not natively supported and might require third-party libraries, `NestJS` simplifies this with built-in Dependency Injection, leading to more modular and testable code. As a best practice, environment-specific configurations like database host details should be abstracted away into separate configuration services, ensuring that the code adheres to the Twelve-Factor App methodology.
