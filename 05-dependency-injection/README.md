@@ -35,3 +35,37 @@ This is the standard provider technique, you have used in our application. You c
   ],
 })
 ```
+
+### **Value Providers**
+
+These are hard-coded values or configurations injected into other classes. This feature can replace the need for environment variables or configuration files, which in frameworks like Express, would typically be managed by separate packages. Using value providers for constants and configuration settings contributes to code maintainability.
+
+`songs.module.ts`
+
+```tsx
+const mockSongsService = {
+  findAll() {
+    return [
+      {
+        id: 1,
+        title: 'Lasting love',
+        artists: ['Siagla', 'Martin', 'John'],
+      },
+    ];
+  },
+};
+
+@Module({
+  controllers: [SongsController],
+  providers: [
+    {
+      provide: SongsService,
+      useValue: mockSongsService,
+    },
+  ],
+})
+```
+
+The `useValue` syntax is useful for injecting a constant value, putting an external library into the Nest container, or replacing a real implementation with a mock object. Let’s say you’d like to force Nest to use a mock `SongsService`for testing purposes.
+
+When you send `GET` request to localhost:3000/songs it will run the`findAll()` method from `mockSongsService` instead of original `SongsService`
