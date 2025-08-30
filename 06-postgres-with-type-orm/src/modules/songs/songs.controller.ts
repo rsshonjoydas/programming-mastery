@@ -8,10 +8,12 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Put,
 } from '@nestjs/common';
 
-import { DeleteResult } from 'typeorm';
+import { DeleteResult, UpdateResult } from 'typeorm';
 import { CreateSongDTO } from './dto/create-song.dto';
+import { UpdateSongDTO } from './dto/update-song.dto';
 import { Song } from './song.entity';
 import { SongsService } from './songs.service';
 
@@ -45,5 +47,13 @@ export class SongsController {
   @Delete(':id')
   delete(@Param('id', ParseIntPipe) id: number): Promise<DeleteResult> {
     return this.songsService.remove(id);
+  }
+
+  @Put(':id')
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSongDTO: UpdateSongDTO,
+  ): Promise<UpdateResult> {
+    return this.songsService.update(id, updateSongDTO);
   }
 }

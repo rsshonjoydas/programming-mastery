@@ -314,3 +314,103 @@ delete(@Param('id', ParseIntPipe) id: number): Promise<DeleteResult> {
   return this.songsService.remove(id);
 }
 ```
+
+### **Update Record**
+
+`songs.service.ts`
+
+```tsx
+update(id: number, recordToUpdate: UpdateSongDTO): Promise<UpdateResult> {
+  return this.songRepository.update(id, recordToUpdate);
+}
+```
+
+Create a new update method in `songs.service.ts`. The first argument should be the id, and the second argument should be `recordToUpdate`. Ensure the type of `recordToUpdate` is a DTO object.
+
+Create another DTO object to update the record.
+
+`update-song.dto.ts`
+
+```tsx
+import {
+  IsArray,
+  IsDateString,
+  IsMilitaryTime,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+
+export class UpdateSongDTO {
+  @IsString()
+  @IsOptional()
+  readonly title;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  readonly artists;
+
+  @IsDateString()
+  @IsOptional()
+  readonly releasedDate: Date;
+
+  @IsMilitaryTime()
+  @IsOptional()
+  readonly duration: Date;
+
+  @IsString()
+  @IsOptional()
+  readonly lyrics: string;
+}
+```
+
+**`OR` using `@nestjs/mapped-types` package**
+
+Then you can use `PartialType` to automatically make all fields from a base DTO optional
+
+```bash
+**pnpm add @nestjs/mapped-types**
+```
+
+Create another DTO object to update the record.
+
+`update-song.dto.ts`
+
+```tsx
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateSongDTO } from './create-song-dto';
+
+export class UpdateSongDTO extends PartialType(CreateSongDTO) {}
+```
+
+Make all these fields optional, as it depends on the user which record they want to update. Use the `@IsOptional()` decorator for each field to indicate this.
+
+`songs.controller.ts`
+
+```ts
+@Put(':id')
+update(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() updateSongDTO: UpdateSongDto,
+): Promise <UpdateResult> {
+  return this.songsService.update(id, updateSongDTO);
+}
+```
+
+### **Test the Application:**
+
+- Method: `PUT`
+- URL: [`http://localhost:3001/songs/3`](http://localhost:3001/songs/3)
+- Body:
+
+  ```json
+  {
+    "title": "You for Me 3",
+    "artists": ["Siagla", "Yan", "Ny"],
+    "releasedDate": "2022-09-30",
+    "duration": "02:45",
+    "lyrics": "Sby, you're my adrenaline. Brought out this other side of me You don't even know Controlling my whole anatomy, oh Fingers are holding you right at the edge You're slipping out of my hands Keeping my secrets all up in my head I'm scared that you won't want me back, oh I dance to every song like it's about ya I drink 'til I kiss someone who looks like ya I wish that I was honest when I had you I shoulda told you that I wanted you for me I dance to every song like it's about ya I drink 'til I kiss someone who looks like ya"
+  }
+  ```
+
+Now you can test the application by executing this command `npm run start:dev`. You have to send a request to update the record.
