@@ -268,3 +268,28 @@ Use the `findAll` method in the repository to fetch all records from the databas
 ```
 
 Update the return type for the `findAll()` method in `songs.controller.ts.` Use `Promise<Song[]>` because `songService.findAll` will return an array of songs.
+
+### **Find Record by ID**
+
+`songs.service.ts`
+
+```tsx
+async findOne(id: number): Promise<Song> {
+  const song = await this.songRepository.findOneBy({ id });
+  if (!song) {
+    throw new NotFoundException(`Song with ID ${id} not found`);
+  }
+  return song;
+}
+```
+
+You can find the record by id by using `findOneBy()` from the `songsRepository`.
+
+`songs.controller.ts`
+
+```tsx
+@Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<Song> {
+  return this.songsService.findOne(id);
+}
+```
