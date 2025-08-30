@@ -27,11 +27,7 @@ export class SongsService {
     return await this.songRepository.save(song);
   }
 
-  findAll() {
-    // Error comes while fetching the data from DB
-    throw new Error('Error in Database while fetching songs');
-
-    // fetch the songs from the database
-    // return this.songs;
+  findAll(): Promise<Song[]> {
+    return this.songRepository.find();
   }
 }

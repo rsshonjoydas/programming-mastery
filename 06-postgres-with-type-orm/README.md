@@ -234,3 +234,37 @@ In the context of `NestJS` and `TypeORM`, methods like save(), find(), or delete
 ```
 
 Add the return type for the create method, which is a promise containing the Song entity.
+
+### **Find All Records**
+
+`songs.service.ts`
+
+```tsx
+findAll(): Promise<Song[]> {
+  return this.songRepository.find();
+}
+```
+
+Use the `findAll` method in the repository to fetch all records from the database table.
+
+`songs.controller.ts`
+
+```tsx
+
+  @Get()
+  findAll(): Promise<Song[]> {
+    try {
+      return this.songsService.findAll();
+    } catch (e) {
+      throw new HttpException(
+        'server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        {
+          cause: e,
+        },
+      );
+    }
+  }
+```
+
+Update the return type for the `findAll()` method in `songs.controller.ts.` Use `Promise<Song[]>` because `songService.findAll` will return an array of songs.
