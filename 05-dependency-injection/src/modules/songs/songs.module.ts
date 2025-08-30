@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { connection } from '@/common/constants/connection';
 import { SongsController } from './songs.controller';
 import { SongsService } from './songs.service';
 
@@ -28,6 +29,12 @@ const mockSongsService = {
     {
       provide: SongsService,
       useValue: mockSongsService,
+    },
+
+    // Non-Class based Provider Tokens
+    {
+      provide: 'CONNECTION',
+      useValue: connection,
     },
   ],
 })
