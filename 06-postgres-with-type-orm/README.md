@@ -188,3 +188,49 @@ export class SongsService {
 ```
 
 `SongRepository` provides `CRUD` methods to create, delete, update, and fetch records from the Songs table. In a `NestJS` application, this specialized repository is responsible for handling all operations related to the Songs entity, abstracting the database interactions and thus adhering to the repository best practice.
+
+### **Create Record**
+
+Now, you should implement the create song method. This time, there is no need to add a record in the local `db` array. Save the new song in the database by using the `songRepository.save()` method
+
+`songs.service.ts`
+
+```tsx
+  async create(songDTO: CreateSongDTO): Promise<Song> {
+    const song = new Song();
+    song.title = songDTO.title;
+    song.artists = songDTO.artists;
+    song.duration = songDTO.duration;
+    song.lyrics = songDTO.lyrics;
+    song.releasedDate = songDTO.releasedDate;
+    return await this.songRepository.save(song);
+  }
+```
+
+**`OR` use this shortcut**
+
+```tsx
+  async create(songDTO: CreateSongDTO): Promise<Song> {
+    const song = this.songRepository.create(songDTO);
+    return await this.songRepository.save(song);
+  }
+```
+
+Instantiate a new song instance from the Song Entity. Set the fields of the songs table using the DTO object, and finally, return a promise containing the song object from the create method.
+
+A database promise is essential for handling asynchronous operations when interacting with a database. In a web application, tasks like `querying`, updating, or `deleting` records are not instantaneous and can take an undefined amount of time to complete. Utilizing promises allows your application to continue executing other tasks while waiting for the database operation to resolve, thereby improving performance and user experience.
+
+In the context of `NestJS` and `TypeORM`, methods like save(), find(), or delete() often return promises. By defining a return type like `Promise<Song[]>` in your service or controller methods, you make it explicit that the function is asynchronous and will return data at a future point in time. This is particularly beneficial for type-checking and for setting the expectations for the developers who will consume these methods.
+
+`songRepository` provides the save method to save the record in a database table. You have to provide the instance of the entity which entity record you want to save.
+
+`songs.controller.ts`
+
+```tsx
+  @Post()
+  create(@Body() createSongDTO: CreateSongDTO): Promise<Song> {
+    return this.songsService.create(createSongDTO);
+  }
+```
+
+Add the return type for the create method, which is a promise containing the Song entity.

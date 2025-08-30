@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 
 import { CreateSongDTO } from './dto/create-song.dto';
+import { Song } from './song.entity';
 import { SongsService } from './songs.service';
 
 @Controller('songs')
@@ -17,8 +18,7 @@ export class SongsController {
   constructor(private songsService: SongsService) {}
 
   @Post()
-  create(@Body() createSongDTO: CreateSongDTO) {
-    // TypeScript knows exactly what properties are available
+  create(@Body() createSongDTO: CreateSongDTO): Promise<Song> {
     return this.songsService.create(createSongDTO);
   }
 

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { CreateSongDTO } from './dto/create-song.dto';
 import { Song } from './song.entity';
 
 @Injectable()
@@ -11,13 +12,19 @@ export class SongsService {
     private songRepository: Repository<Song>,
   ) {}
 
-  // local database -> array
-  private readonly songs: unknown[] = [];
+  // async create(songDTO: CreateSongDTO): Promise<Song> {
+  //   const song = new Song();
+  //   song.title = songDTO.title;
+  //   song.artists = songDTO.artists;
+  //   song.duration = songDTO.duration;
+  //   song.lyrics = songDTO.lyrics;
+  //   song.releasedDate = songDTO.releasedDate;
+  //   return await this.songRepository.save(song);
+  // }
 
-  create(song) {
-    // save the song in the database
-    this.songs.push(song);
-    return this.songs;
+  async create(songDTO: CreateSongDTO): Promise<Song> {
+    const song = this.songRepository.create(songDTO);
+    return await this.songRepository.save(song);
   }
 
   findAll() {
