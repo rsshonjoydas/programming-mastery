@@ -53,9 +53,32 @@ export class SongsService {
     return this.songRepository.update(id, recordToUpdate);
   }
 
-  async paginate(options: IPaginationOptions): Promise<Pagination<Song>> {
-    // Adding query builder
-    // If you need to add query builder you can add it here
-    return paginate<Song>(this.songRepository, options);
+  // async paginate(options: IPaginationOptions): Promise<Pagination<Song>> {
+  //   // Adding query builder
+  //   // If you need to add query builder you can add it here
+  //   return paginate<Song>(this.songRepository, options);
+  // }
+  async paginate(
+    options: IPaginationOptions & { route?: string },
+  ): Promise<Pagination<Song>> {
+    const page =
+      typeof options.page === 'string'
+        ? parseInt(options.page, 10)
+        : options.page;
+    const limit =
+      typeof options.limit === 'string'
+        ? parseInt(options.limit, 10)
+        : options.limit;
+
+    const paginationOptions: IPaginationOptions = {
+      page: page || 1,
+      limit: Math.min(limit || 10, 100),
+      route: options.route,
+    };
+
+    const queryBuilder = this.songRepository.createQueryBuilder('song');
+    queryBuilder.orderBy('song.releasedDate', 'DESC');
+
+    return paginate<Song>(queryBuilder, paginationOptions);
   }
 }

@@ -477,3 +477,108 @@ Now test the application by sending request
 `?page=2&limit=2` that’s mean show only two request in the response
 
 Specify the page and limit value on the based on your `situation/use-case`
+
+### **Apply `Sorting/Orderby` with `links`**
+
+To apply sorting or filtering, utilize the `QueryBuilder` feature. Consult the `TypeORM` documentation for guidance on using `QueryBuilder`.
+
+`songs.service.ts`
+
+```tsx
+async paginate(
+  options: IPaginationOptions & { route?: string },
+): Promise<Pagination<Song>> {
+  const page =
+    typeof options.page === 'string'
+      ? parseInt(options.page, 10)
+      : options.page;
+  const limit =
+    typeof options.limit === 'string'
+      ? parseInt(options.limit, 10)
+      : options.limit;
+
+  const paginationOptions: IPaginationOptions = {
+    page: page || 1,
+    limit: Math.min(limit || 10, 100),
+    route: options.route,
+  };
+
+  const queryBuilder = this.songRepository.createQueryBuilder('song');
+  queryBuilder.orderBy('song.releasedDate', 'DESC');
+
+  return paginate<Song>(queryBuilder, paginationOptions);
+}
+```
+
+**Refactor `findAll` method in songs controller**
+
+`songs.controller.ts`
+
+```tsx
+@Get()
+findAll(
+  @Query('page', new DefaultValuePipe(1), ParseIntPipe)
+  page = 1,
+  @Query('limit', new DefaultValuePipe(10), ParseIntPipe)
+  limit = 10,
+  @Req() request: Request,
+): Promise<Pagination<Song>> {
+  limit = limit > 100 ? 100 : limit;
+
+  // Get base URL
+  const baseUrl = `${request.protocol}://${request.get('host')}${request.path}`;
+
+  return this.songsService.paginate({
+    page,
+    limit,
+    route: baseUrl,
+  });
+}
+```
+
+To sort records, either manually add the `orderBy` field or retrieve it from the query parameters, depending on your specific use case. Test the application to view records sorted by `releasedDate` in descending order.
+
+---
+
+**Don't Forget to Import Request:**
+
+`songs.controller.ts` verify import
+
+```tsx
+import { type Request } from 'express';
+import {
+  Controller,
+  Get,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
+  Req,
+} from '@nestjs/common';
+```
+
+**Expected Response with Links:**
+
+When you add the `route` option, your response will include navigation link
+
+Fetch all songs `Response`
+
+```json
+{
+  "items": [
+    // your song items here
+  ],
+  "meta": {
+    "totalItems": 150,
+    "itemCount": 10,
+    "itemsPerPage": 10,
+    "totalPages": 15,
+    "currentPage": 2
+  },
+  "links": {
+    "first": "http://localhost:3000/songs?limit=10",
+    "previous": "http://localhost:3000/songs?page=1&limit=10",
+    "next": "http://localhost:3000/songs?page=3&limit=10",
+    "last": "http://localhost:3000/songs?page=15&limit=10"
+  }
+}
+```

@@ -9,7 +9,9 @@ import {
   Post,
   Put,
   Query,
+  Req,
 } from '@nestjs/common';
+import { type Request } from 'express';
 import { Pagination } from 'nestjs-typeorm-paginate';
 import { DeleteResult, UpdateResult } from 'typeorm';
 
@@ -40,17 +42,37 @@ export class SongsController {
   //   }
   // }
 
+  // @Get()
+  // findAll(
+  //   @Query('page', new DefaultValuePipe(1), ParseIntPipe)
+  //   page = 1,
+  //   @Query('limit', new DefaultValuePipe(10), ParseIntPipe)
+  //   limit = 10,
+  // ): Promise<Pagination<Song>> {
+  //   limit = limit > 100 ? 100 : limit;
+  //   return this.songsService.paginate({
+  //     page,
+  //     limit,
+  //   });
+  // }
+
   @Get()
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe)
     page = 1,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe)
     limit = 10,
+    @Req() request: Request,
   ): Promise<Pagination<Song>> {
     limit = limit > 100 ? 100 : limit;
+
+    // Get base URL
+    const baseUrl = `${request.protocol}://${request.get('host')}${request.path}`;
+
     return this.songsService.paginate({
       page,
       limit,
+      route: baseUrl,
     });
   }
 
