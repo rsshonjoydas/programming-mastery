@@ -183,3 +183,34 @@ findAll() {
 - Logging messages in the `catch block` serves as a best practice for `debugging` and `auditing` purposes. In `NestJS`, logging can be more streamlined thanks to its modular architecture and built-in Logger class, unlike Express, where a third-party library like `winston` or `morgan` is generally needed for robust logging.
 - Sending specific HTTP status codes along with error messages is facilitated in `NestJS` through its built-in `HttpException` class. This provides more granularity and control over error responses compared to Express, which often requires additional libraries like http-errors for similar functionality.
 - Opting for a 500 Internal Server Error is a choice that indicates a server-side issue. As a best practice, principal engineers might choose to map exceptions to specific HTTP status codes based on the nature of the error, a feature that is natively supported and simplified in `NestJS` compared to Express.
+
+## Pipe
+
+Transform Param using `ParseInt` is a feature in `NestJS` that allows for easy type conversion. In contrast to frameworks like Express, which lack built-in parameter transformation, `NestJS`’s use of `pipes` offers a more automated and native approach to type coercion, adhering to best practices for robust type checking, which a principal engineer would highly value.
+
+**There are two primary use cases for pipes:** `transforming the value` and `validating the input parameters`. While Express requires middleware or additional libraries like `express-validator` to achieve similar functionality, `NestJS` pipes integrate seamlessly into the framework’s ecosystem, offering a more elegant, maintainable solution for both value transformation and input validation—aligned with the architectural best practices that a principal engineer would implement.
+
+### **Transforming the value**
+
+`songs.controller.ts`
+
+```bash
+  @Get(':id')
+  findOne(
+    // @Param('id') // id typeof string
+    @Param(
+      // id typeof number
+      'id',
+      new ParseIntPipe({ errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE }),
+    )
+    id: number,
+  ) {
+    return `fetch song on the based on id ${typeof id}`;
+  }
+```
+
+- Dynamic parameters can be captured using the `@Param` decorator, where the argument name needs to be specified. In contrast to Express, where request parameters are extracted using `req.params`, `NestJS` provides a more declarative and type-safe way to do so, adhering to best practices by enforcing a stricter type system.
+- The `id` parameter is of type `string` by default. Utilizing `ParseIntPipe` will automatically convert this `string` value to a `number`. Unlike in Express, which would require manual type conversion, `NestJS`’s use of pipes allows for automatic type transformation, making the code more robust and maintainable, a practice any principal engineer would appreciate.
+- Sending a request to <http://localhost:3000/songs/1> will result in logging the type of id as a number. This showcases `NestJS`’s ability to utilize pipes for transformation tasks, an area where it holds an edge over frameworks like Express, which necessitate separate middleware for such operations.
+- The error status code can also be provided to `ParseIntPipe`. Should a string value be provided, an error will be generated. This approach lends itself to better error handling in `NestJS` compared to the more manual error-checking methods required in Express.
+- Sending a request to <http://localhost:3000/songs/abc> will produce an error message stating “not acceptable.” In frameworks like Express, validation logic for handling such errors would generally need to be written explicitly, whereas `NestJS` allows for more configurable and built-in validation mechanisms. This feature aligns with best practices for maintainability and scalability.
