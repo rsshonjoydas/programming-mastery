@@ -139,3 +139,47 @@ export class AppModule implements NestModule {
 - Start the application using `npm run start:dev`.
 - When sending a request to any songs API route, ensure it displays the current date.
 - Send a `GET` request to `localhost:3000/songs`.
+
+## **Handling Exceptions**
+
+If an error occurs in the code, handling it becomes crucial. `NestJS` offers built-in HTTP exception handling that streamlines the process of sending informative, well-structured responses to the client, a feature that sets it apart from frameworks like Express, which require additional middleware for similar functionality.
+
+Throwing an exception in the `songs.service.ts` `findAll` method can be accomplished with ease. In `NestJS`, using `throw new HttpException('Description', HttpStatus.STATUS_CODE)` allows for both custom messages and HTTP status codes, providing a more developer-friendly and robust error-handling mechanism than some other backend frameworks like Flask, where exceptions often require more manual setup.
+
+`songs.service.ts`
+
+```tsx
+  findAll() {
+    // Error comes while fetching the data from DB
+    throw new Error('Error in Database while fetching songs');
+
+    // fetch the songs from the database
+    // return this.songs;
+  }
+```
+
+A fake error message has been sent to simulate an issue while fetching data from the database. Sending a request to fetch all songs from [`http://localhost:3000/songs](http://localhost:3000/songs)` will result in an error message accompanied by a 500 status code.
+
+**Handling Exception with `Try/Catch`**
+
+`songs.controller.ts`
+
+```tsx
+@Get()
+findAll() {
+  try {
+    return this.songsService.findAll();
+  } catch (error) {
+    throw new HttpException(
+      'Internal server error',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      { cause: error },
+    );
+  }
+}
+```
+
+- Exception handling is possible using the `try/catch` block, a standard programming construct. Within the scope of `NestJS`, this is more structured and type-safe compared to Express, where error handling often relies on middleware functions and lacks native TypeScript support.
+- Logging messages in the `catch block` serves as a best practice for `debugging` and `auditing` purposes. In `NestJS`, logging can be more streamlined thanks to its modular architecture and built-in Logger class, unlike Express, where a third-party library like `winston` or `morgan` is generally needed for robust logging.
+- Sending specific HTTP status codes along with error messages is facilitated in `NestJS` through its built-in `HttpException` class. This provides more granularity and control over error responses compared to Express, which often requires additional libraries like http-errors for similar functionality.
+- Opting for a 500 Internal Server Error is a choice that indicates a server-side issue. As a best practice, principal engineers might choose to map exceptions to specific HTTP status codes based on the nature of the error, a feature that is natively supported and simplified in `NestJS` compared to Express.
