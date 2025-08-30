@@ -414,3 +414,66 @@ update(
   ```
 
 Now you can test the application by executing this command `npm run start:dev`. You have to send a request to update the record.
+
+## **Pagination**
+
+### **Install Pagination Package**
+
+\*\*\*\*You are going to use `nestjs-typeorm-paginate` to implement pagination. This package offers several features that make it advantageous over implementing pagination manually:
+
+```bash
+pnpm i nestjs-typeorm-paginate
+```
+
+- **Type Safety:** Being designed for `TypeORM`and Nest.js, it ensures type-safe queries and pagination object returns, reducing the risk of runtime errors.
+- **Seamless Integration:** It’s optimized for Nest.js and `TypeORM`, making integration simple and straightforward without needing to modify existing code significantly.
+- **Metadata-based:** The package automatically computes pagination metadata like total items, pages, current page number, etc., saving you the time to calculate these manually.
+- **Customizable:** It allows for detailed customization like specifying relations to be loaded, limiting fields, and more, enabling more advanced query operations.
+
+### **Create new Paginate method**
+
+Create a new paginate method in `songs.service.ts`
+
+`songs.service.ts`
+
+```tsx
+async paginate(options: IPaginationOptions): Promise<Pagination<Song>> {
+  // Adding query builder
+  // If you need to add query builder you can add it here
+  return paginate<Song>(this.songRepository, options);
+}
+```
+
+**Refactor `findAll` method in songs controller**
+
+`songs.controller.ts`
+
+```tsx
+@Get()
+findAll(
+  @Query('page', new DefaultValuePipe(1), ParseIntPipe)
+  page = 1,
+  @Query('limit', new DefaultValuePipe(10), ParseIntPipe)
+  limit = 10,
+): Promise<Pagination<Song>> {
+  limit = limit > 100 ? 100 : limit;
+  return this.songsService.paginate({
+    page,
+    limit,
+  });
+}
+```
+
+Refactor the `findAll` method in `songs.controller.ts` to obtain `page` and `limit` from the request query parameters. Use the `@Query` decorator to capture these query parameters.
+
+Set default values for `page` and `limit`, and then call the `paginate`method from `songService`, passing in the page and limit values.
+
+**Test the Application:**
+
+Now test the application by sending request
+
+<http://localhost:3001/songs/?page=2&limit=2>
+
+`?page=2&limit=2` that’s mean show only two request in the response
+
+Specify the page and limit value on the based on your `situation/use-case`
