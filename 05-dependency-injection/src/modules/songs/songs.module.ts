@@ -18,6 +18,13 @@ const mockSongsService = {
 @Module({
   controllers: [SongsController],
   providers: [
+    // Standard Provider
+    {
+      provide: SongsService,
+      useValue: SongsService,
+    },
+
+    // Value Provider
     {
       provide: SongsService,
       useValue: mockSongsService,
