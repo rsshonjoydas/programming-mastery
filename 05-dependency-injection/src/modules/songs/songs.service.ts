@@ -1,7 +1,10 @@
 import { type Connection } from '@/common/constants/connection';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Scope } from '@nestjs/common';
 
-@Injectable()
+// @Injectable()
+@Injectable({
+  scope: Scope.TRANSIENT,
+})
 export class SongsService {
   // local database -> array
   private readonly songs: unknown[] = [];

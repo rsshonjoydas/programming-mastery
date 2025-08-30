@@ -264,3 +264,44 @@ I have injected the `CONFIG` provider inside the `AppService`.
 Exploration of all six techniques will take place, each elucidated through an example.
 
 We are going to play around with all these 6 techniques. I will explain each technique with the help of an example
+
+## **Injection Scopes**
+
+Provider scopes in `NestJS` can be categorized into three main types:
+
+### DEFAULT
+
+In this scope, a single instance of the provider is shared across the entire application, a feature similar to Express’s singleton services but made explicit in `NestJS`. When the application requests this provider a second time, `NestJS` retrieves it from an internal cache, a mechanism that enhances application performance. As a best practice, caching providers to minimize computational overhead is advisable.
+
+### REQUEST
+
+Contrary to the DEFAULT scope, a new instance of the provider is created for each incoming request. While this provides better isolation, it’s a different model from Express’s middleware-based architecture where request-level isolation usually involves function scope. This scope is ideal for scenarios where each request may need a provider with state that shouldn’t affect other requests.
+
+### TRANSIENT
+
+Transient providers are unique in that they are not shared across different consumers. When a transient provider is injected, the consumer receives a new, dedicated instance, unlike in Express where this level of injection granularity is not native and often must be manually managed. Employing transient providers is good practice when state isolation between consumers is crucial.
+
+---
+
+**Example:**
+
+`Step 1.` → `songs.service.ts`
+
+```tsx
+@Injectable({
+  scope: Scope.TRANSIENT
+})
+```
+
+`Step 2` → `songs.controller.ts`
+
+```tsx
+@Controller({
+  path: 'songs',
+  scope: Scope.REQUEST,
+})
+```
+
+A new instance of `SongsController` is created for every incoming request, offering a more stateless architecture. In contrast, frameworks like Express use a singleton pattern for controllers, thus reusing the same instance for all requests, which can introduce state-related issues. Adopting a stateless architecture is a best practice for improving scalability and maintainability.
+
+Debugging dependencies may present challenges, but understanding the usage of different scopes is essential. Unlike Express, which lacks a built-in `DI (Dependency Injection)`system, `NestJS` has various scopes for dependency injection, making it more flexible for complex use cases. Utilizing the correct scope for dependencies is considered a best practice, as it improves performance and the overall architecture.

@@ -8,13 +8,18 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Scope,
 } from '@nestjs/common';
 
 import { type Connection } from '../../common/constants/connection';
 import { CreateSongDTO } from './dto/create-song.dto';
 import { SongsService } from './songs.service';
 
-@Controller('songs')
+// @Controller('songs')
+@Controller({
+  path: 'songs',
+  scope: Scope.REQUEST,
+})
 export class SongsController {
   constructor(
     private songsService: SongsService,
