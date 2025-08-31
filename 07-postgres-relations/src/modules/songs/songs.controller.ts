@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { type Request } from 'express';
 import { Pagination } from 'nestjs-typeorm-paginate';
-import { DeleteResult, UpdateResult } from 'typeorm';
+import { DeleteResult } from 'typeorm';
 
 import { CreateSongDTO } from './dto/create-song.dto';
 import { UpdateSongDTO } from './dto/update-song.dto';
@@ -63,7 +63,7 @@ export class SongsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateSongDTO: UpdateSongDTO,
-  ): Promise<UpdateResult> {
+  ): Promise<Song> {
     return this.songsService.update(id, updateSongDTO);
   }
 }
