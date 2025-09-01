@@ -301,3 +301,251 @@ POST http://localhost:3000/songs
  "lyrics": "Sby, you're my adrenaline. Brought out this other side of me You don't even know Controlling my whole anatomy, oh Fingers are holding you right at the edge You're slipping out of my hands Keeping my secrets all up in my head I'm scared that you won't want me back, oh I dance to every song like it's about ya I drink 'til I kiss someone who looks like ya I wish that I was honest when I had you I shoulda told you that I wanted you for me I dance to every song like it's about ya I drink 'til I kiss someone who looks like ya"
 }
 ```
+
+## **One to Many Relation**
+
+Define a Many-to-One/One-to-Many relationship in your entities to model scenarios where Entity A can have multiple instances of Entity B, but Entity B contains only one instance of Entity A. For example, each Playlist entity could have multiple Song entities, and each User entity can have multiple Playlist entities, while each Playlist belongs to a single User.
+
+In Nest.js, leverage `TypeORM`'s @ManyToOne and @OneToMany decorators to annotate these relationships in your entities. This enables Nest.js to automatically manage the relations through its underlying ORM capabilities.
+
+From a software engineering standpoint, this design pattern enforces the Single Responsibility Principle (SRP) by clearly defining and separating the responsibilities of each entity. It ensures that each entity only manages the data and relationships that are directly relevant to it, thereby making the system easier to understand, debug, and maintain.
+
+### **Create a Playlist Entity and add Relations**
+
+```tsx
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+
+import { Song } from '@/modules/songs/song.entity';
+import { User } from '@/modules/users/user.entity';
+
+@Entity('playlists')
+export class Playlist {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  name: string;
+
+  /**
+   * Each Playlist will have multiple songs
+   */
+  @OneToMany(() => Song, (song) => song.playList)
+  songs: Song[];
+
+  /**
+   * Many Playlist can belong to a single unique user
+   */
+  @ManyToOne(() => User, (user) => user.playLists)
+  user: User;
+}
+```
+
+Add a `@OneToMany` relationship between the song and the playlist, as well as a `@ManyToOne` relationship between the playlist and the user. The playlist table will include `userId` as a foreign key.
+
+### **Add Many to One Relation in Song Entity**
+
+```tsx
+@Entity('songs')
+export class Song {
+  /**
+   * Many songs can belong to playlist for each unique user
+   */
+  @ManyToOne(() => Playlist, (playList) => playList.songs)
+  playList: Playlist;
+}
+```
+
+This Song entity will have the `playlistId` as a foreign key in the songs table.
+
+### **Add One to Many Relation in User**
+
+```tsx
+@Entity('users')
+export class User {
+  /**
+   * A user can create many playLists
+   */
+  @OneToMany(() => Playlist, (playList) => playList.user)
+  playLists: Playlist[];
+}
+```
+
+### **Create `PlayList` Module**
+
+```tsx
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { Playlist } from '@/modules/playlists/playlist.entity';
+import { PlayListsController } from '@/modules/playlists/playlists.controller';
+import { PlayListsService } from '@/modules/playlists/playlists.service';
+import { Song } from '@/modules/songs/song.entity';
+import { User } from '@/modules/users/user.entity';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Playlist, Song, User])],
+  controllers: [PlayListsController],
+  providers: [PlayListsService],
+})
+export class PlayListModule {}
+```
+
+Treat the `PlayListModule` as a feature module within your Nest.js application. In the context of software modularization, a feature module encapsulates specific functionalities, allowing for clean separation of concerns. By adopting this approach, you're following the Single Responsibility Principle, making the application easier to understand, develop, and test.
+
+### **Create `PlayList` Service**
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+
+import { CreatePlayListDTO } from '@/modules/playlists/dto/create-playlist.dto';
+import { Playlist } from '@/modules/playlists/playlist.entity';
+import { Song } from '@/modules/songs/song.entity';
+import { User } from '@/modules/users/user.entity';
+
+@Injectable()
+export class PlayListsService {
+  constructor(
+    @InjectRepository(Playlist)
+    private playListRepo: Repository<Playlist>,
+
+    @InjectRepository(Song)
+    private songsRepo: Repository<Song>,
+
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
+  ) {}
+  async create(playListDTO: CreatePlayListDTO): Promise<Playlist> {
+    // Validate input DTO
+    if (!playListDTO) {
+      throw new Error('PlayList data is required');
+    }
+
+    if (!playListDTO.name?.trim()) {
+      throw new Error('Playlist name is required');
+    }
+
+    if (!playListDTO.user) {
+      throw new Error('User ID is required');
+    }
+
+    // Create new playlist instance
+    const playList = new Playlist();
+    playList.name = playListDTO.name.trim();
+
+    // Handle songs if provided
+    if (playListDTO.songs && playListDTO.songs.length > 0) {
+      const songs = await this.songsRepo.findBy({ id: In(playListDTO.songs) });
+
+      // Check if all requested songs were found
+      if (songs.length !== playListDTO.songs.length) {
+        throw new Error('Some songs were not found');
+      }
+
+      playList.songs = songs;
+    } else {
+      // Initialize with empty array if no songs provided
+      playList.songs = [];
+    }
+
+    // Find and validate user
+    const user = await this.userRepo.findOneBy({ id: playListDTO.user });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    playList.user = user;
+
+    try {
+      return await this.playListRepo.save(playList);
+    } catch (error) {
+      throw new Error(`Failed to create playlist: ${error.message}`);
+    }
+  }
+}
+```
+
+### **Create a Data Transfer Object DTO for the Playlist**
+
+```tsx
+import { IsArray, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+
+export class CreatePlayListDto {
+  @IsString()
+  @IsNotEmpty()
+  readonly name;
+
+  @IsNotEmpty()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  readonly songs;
+
+  @IsNumber()
+  @IsNotEmpty()
+  readonly user: number;
+}
+```
+
+To create a `PlayList`, send a request that includes the name, an array of song IDs, and a user ID. Ensure that these parameters are formatted correctly in the request payload.
+
+### **Create `PlayListsController`**
+
+```tsx
+import { Body, Controller, Post } from '@nestjs/common';
+
+import { CreatePlayListDTO } from './dto/create-playlist.dto';
+import { Playlist } from './playlist.entity';
+import { PlayListsService } from './playlists.service';
+
+@Controller('playlists')
+export class PlayListsController {
+  constructor(private playListService: PlayListsService) {}
+  @Post()
+  create(
+    @Body()
+    playlistDTO: CreatePlayListDTO,
+  ): Promise<Playlist> {
+    return this.playListService.create(playlistDTO);
+  }
+}
+```
+
+Create an endpoint to facilitate the addition of a new playlist. Enable the end user to send a `POST` request to localhost:3000/playlists for this purpose. Ensure that `PlaylistRepository`, `SongRepository`, and `UserRepository` are available in the `PlayListService`.
+
+### **Register the `PlayList` Module in `AppModule`**
+
+```tsx
+@Module({
+  imports: [
+    TypeOrmModule.forRoot({
+      // previous...
+      entities: [Song, Artist, User, Playlist],
+    }),
+    SongsModule,
+    PlayListModule,
+  ],
+  // previous...
+})
+// previous...
+```
+
+Register the Playlist entity in the entities array. This step is essential for Nest.js to recognize the entity and make it available for database operations. It aligns with the software engineering principle of modularization, allowing each entity to serve as an isolated module within the larger application structure.
+
+### Test the Application
+
+You can test the application by sending the `POST` API request to <http://localhost:3000/playlists>. You also have to provide the JSON body to save the playlist record
+
+```json
+{
+  "name": "Feel Good Now",
+  "songs": [3],
+  "user": 2
+}
+```

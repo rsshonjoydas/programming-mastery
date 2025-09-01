@@ -9,6 +9,8 @@ import { TypedConfigService } from '@/common/config/config.service';
 import { appConfig } from '@/common/config/configuration';
 import { validateEnvironment } from '@/common/config/env.validation';
 import { Artist } from '@/modules/artists/artist.entity';
+import { Playlist } from '@/modules/playlists/playlist.entity';
+import { PlayListModule } from '@/modules/playlists/playlists.module';
 import { Song } from '@/modules/songs/song.entity';
 import { SongsController } from '@/modules/songs/songs.controller';
 import { SongsModule } from '@/modules/songs/songs.module';
@@ -35,7 +37,7 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
         username: configService.get<string>('POSTGRES_USER'),
         password: configService.get<string>('POSTGRES_PASSWORD'),
         database: configService.get<string>('POSTGRES_DB'),
-        entities: [Song, Artist, User],
+        entities: [Song, Artist, User, Playlist],
         synchronize: true, // Warning: Use only in development
       }),
       inject: [ConfigService],
@@ -43,6 +45,7 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
 
     // ... other modules
     SongsModule,
+    PlayListModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
