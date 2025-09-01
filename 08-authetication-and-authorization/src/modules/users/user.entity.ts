@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 import { Playlist } from '@/modules/playlists/playlist.entity';
@@ -17,6 +18,7 @@ export class User {
   email: string;
 
   @Column()
+  @Exclude()
   password: string;
 
   /**

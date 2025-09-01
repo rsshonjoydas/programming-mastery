@@ -9,12 +9,14 @@ import { TypedConfigService } from '@/common/config/config.service';
 import { appConfig } from '@/common/config/configuration';
 import { validateEnvironment } from '@/common/config/env.validation';
 import { Artist } from '@/modules/artists/artist.entity';
+import { AuthModule } from '@/modules/auth/auth.module';
 import { Playlist } from '@/modules/playlists/playlist.entity';
 import { PlayListModule } from '@/modules/playlists/playlists.module';
 import { Song } from '@/modules/songs/song.entity';
 import { SongsController } from '@/modules/songs/songs.controller';
 import { SongsModule } from '@/modules/songs/songs.module';
 import { User } from '@/modules/users/user.entity';
+import { UsersModule } from '@/modules/users/users.module';
 import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
 
 @Module({
@@ -46,6 +48,8 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
     // ... other modules
     SongsModule,
     PlayListModule,
+    AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
