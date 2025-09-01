@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { instanceToPlain } from 'class-transformer';
@@ -20,5 +20,13 @@ export class UsersService {
 
     // instanceToPlain will automatically exclude @Exclude decorated fields
     return instanceToPlain(savedUser) as User;
+  }
+
+  async findOne(data: Partial<User>): Promise<User> {
+    const user = await this.userRepository.findOneBy({ email: data.email });
+    if (!user) {
+      throw new UnauthorizedException('Could not find user');
+    }
+    return user;
   }
 }

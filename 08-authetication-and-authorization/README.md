@@ -182,3 +182,154 @@ When working with `TypeORM`, there might be cases where you want to exclude one 
   "password": "123456"
 }
 ```
+
+## User Login
+
+### What is JSON Web Token Authentication
+
+JSON Web Token (`JWT`) authentication is a method of securely transmitting information between parties as a JSON object. It is commonly used for authentication and authorization purposes in web applications and APIs. The flow of JWT authentication involves the following steps:
+
+**User Authentication:** The user provides their credentials (e.g., username and password) to the authentication server. The server verifies the credentials and generates a JWT if they are valid.
+
+**JWT Generation:** Upon successful authentication, the authentication server creates a JWT
+containing three parts: header, payload, and signature.
+
+**Header:** It typically consists of two parts: the token type, which is JWT, and the hashing algorithm used to create the signature. Payload: This contains the claims or statements about the user, such as their username, role, and any additional information. The payload is not encrypted but is `Base64Url` encoded. Signature: The signature is created by combining the encoded header, encoded payload, and a secret key known only to the server. It ensures the integrity of the token and prevents tampering. JWT Issuance: The server responds to the user's authentication request by sending the `JWT` back as a response.
+
+**Token Storage:** The client (usually a web browser or a mobile app) stores the received JWT securely. It can be stored in various places, such as local storage, cookies, or session storage, depending on the application's requirements.
+
+**Token Usage:** For subsequent requests to protected resources, the client includes the JWT in the request headers, typically as the "Authorization" header with the "Bearer" scheme, followed by the JWT.
+
+**Token Verification:** When the server receives a request with a JWT, it extracts the token from the header, payload, and signature.
+
+**Signature Validation:** The server recalculates the signature using the same algorithm and the secret key. If the recalculated signature matches the signature in the token, it ensures the token's integrity.
+
+**Expiration Check:** The server checks the expiration time (`exp`) claim in the payload to ensure the token has not expired. If it has expired, the server rejects the request. Additional Validations: The server may perform additional checks based on the application's requirements, such as verifying the token's audience (`aud`) or checking for revoked tokens. Access Grant: If the token passes all the validations, the server grants access to the requested resource or performs the requested action on behalf of the user.
+
+**Token Renewal:** If the token has an expiration time, the client can request a new JWT before the current one expires. This process is typically done using a refresh token or by re-authenticating the user.
+
+The JWT authentication flow allows the client to include a token with each request, eliminating the need for server-side session storage. It enables stateless authentication, making it suitable for distributed systems and APIs.
+
+### Install Dependencies authentication middleware
+
+```bash
+pnpm i @nestjs/passport passport
+```
+
+`@nestjs/passport` is an official `NestJS` module that provides integration with Passport.js, a popular authentication middleware for Node.js. It simplifies the process of implementing various authentication strategies within a `NestJS` application.
+
+### Create Login Route and Handler
+
+```tsx
+import { Body, Controller, Post } from '@nestjs/common';
+
+import { AuthService } from './auth.service';
+import { LoginDTO } from './dto/login.dto';
+
+import { CreateUserDTO } from '@/modules/users/dto/create-user.dto';
+import { User } from '@/modules/users/user.entity';
+import { UsersService } from '@/modules/users/users.service';
+
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private userService: UsersService,
+    private authService: AuthService,
+  ) {}
+  @Post('register')
+  signup(
+    @Body()
+    createUserDTO: CreateUserDTO,
+  ): Promise<User> {
+    return this.userService.create(createUserDTO);
+  }
+
+  @Post('login')
+  login(
+    @Body()
+    loginDTO: LoginDTO,
+  ) {
+    return this.authService.login(loginDTO);
+  }
+}
+```
+
+We have to create a new login route in `AuthService`. We have called the login method from `Authservice`. We have not created the login method in `AuthService` yet, let's create the login method
+
+```tsx
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
+import { instanceToPlain } from 'class-transformer';
+
+import { LoginDTO } from './dto/login.dto';
+
+import { User } from '@/modules/users/user.entity';
+import { UsersService } from '@/modules/users/users.service';
+
+@Injectable()
+export class AuthService {
+  constructor(private userService: UsersService) {}
+
+  async login(loginDTO: LoginDTO): Promise<User> {
+    const user = await this.userService.findOne(loginDTO);
+    const passwordMatched = await bcrypt.compare(
+      loginDTO.password,
+      user.password,
+    );
+
+    if (passwordMatched) {
+      return instanceToPlain(user) as User; // Assumes @Exclude on password in User entity
+    } else {
+      throw new UnauthorizedException('Password does not match');
+    }
+  }
+}
+```
+
+1. Wehaveto find the user based on email. We need to get the email and password from the request body.
+2. Wewill compare the user password with an encrypted password that we saved in the last video
+3. If the password matches then delete the user password and send the user back in the response. It means the user has logged in successfully
+4. If the password does not match we have to send the error back in the response
+
+### Create `LoginDTO`
+
+You have to create the `LoginDTO` file inside the `auth/dto/login.dto.ts`
+
+```tsx
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+
+export class LoginDTO {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}
+```
+
+### Create `findOne` method inside `UsersService`
+
+```tsx
+  async findOne(data: Partial<User>): Promise<User> {
+    const user = await this.userRepository.findOneBy({ email: data.email });
+    if (!user) {
+      throw new UnauthorizedException('Could not find user');
+    }
+    return user;
+  }
+```
+
+### Test the Application for login user
+
+`POST` <http://localhost:3000/auth/login>
+
+```tsx
+{
+  "email": "john@gmail.com",
+  "password": "123456"
+}
+```
+
+We did not send the JSON web token back in the response. In the next lesson, I will teach you how to send the `JSON` web token in the response when the user has successfully logged in
