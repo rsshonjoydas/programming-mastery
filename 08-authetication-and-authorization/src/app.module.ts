@@ -40,9 +40,9 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
         password: configService.get<string>('POSTGRES_PASSWORD'),
         database: configService.get<string>('POSTGRES_DB'),
         entities: [Song, Artist, User, Playlist],
-        synchronize: true, // Warning: Use only in development
+        synchronize: configService.get<string>('NODE_ENV') === 'development',
       }),
-      inject: [ConfigService],
+      inject: [ConfigService], // Fixed: inject ConfigService to match the parameter
     }),
 
     // ... other modules
@@ -53,6 +53,7 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
+  exports: [TypedConfigService],
 })
 export class AppModule implements NestModule {
   constructor(private dataSource: DataSource) {

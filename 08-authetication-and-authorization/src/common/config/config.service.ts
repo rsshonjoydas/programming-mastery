@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { AppConfiguration, LogLevel } from './configuration';
+import { AppConfiguration, JwtConfig, LogLevel } from './configuration';
 
 @Injectable()
 export class TypedConfigService {
@@ -9,6 +9,10 @@ export class TypedConfigService {
 
   get app(): AppConfiguration {
     return this.configService.get<AppConfiguration>('app')!;
+  }
+
+  get jwt(): JwtConfig {
+    return this.app.jwt;
   }
 
   get logLevel(): LogLevel {
@@ -30,6 +34,23 @@ export class TypedConfigService {
 
   getPort(): number {
     return this.app.port;
+  }
+
+  // JWT utility methods
+  getJwtSecret(): string {
+    return this.jwt.secret;
+  }
+
+  getJwtExpiresIn(): string {
+    return this.jwt.expiresIn;
+  }
+
+  getJwtRefreshSecret(): string {
+    return this.jwt.refreshSecret;
+  }
+
+  getJwtRefreshExpiresIn(): string {
+    return this.jwt.refreshExpiresIn;
   }
 
   // Logging utility methods

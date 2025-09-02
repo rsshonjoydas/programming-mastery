@@ -333,3 +333,482 @@ export class LoginDTO {
 ```
 
 We did not send the JSON web token back in the response. In the next lesson, I will teach you how to send the `JSON` web token in the response when the user has successfully logged in
+
+## Authenticate User
+
+Find the user from the database based on their email and encrypt their password. If the user logs in successfully, generate a JSON Web Token (JWT) and include it in the response. This is a key step in stateless authentication, a software engineering principle that improves scalability and security. In the previous lesson, the generation and inclusion of the JWT in the response were omitted, which left the authentication process incomplete.
+
+### Install Dependencies
+
+```bash
+pnpm i @nestjs/jwt passport-jwt
+
+```
+
+We have to install these packages to implement complete JSON Web Token authentication and Authorization.
+
+### Import JWT Module in `AuthModule`
+
+`auth.module.ts`
+
+```tsx
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+
+import { AuthController } from '@/modules/auth/auth.controller';
+import { AuthService } from '@/modules/auth/auth.service';
+import { UsersModule } from '@/modules/users/users.module';
+
+@Module({
+  imports: [UsersModule, JwtModule.register({ secret: 'JWT_SECRET' })],
+  providers: [AuthService],
+  controllers: [AuthController],
+  exports: [AuthService],
+})
+export class AuthModule {}
+```
+
+### `OR` JWT secret configuration
+
+Based on your document, here's how to add JWT secret configuration to your existing setup:
+
+#### 1. Update Environment Validation (`env.validation.ts`)
+
+```tsx
+import { z } from 'zod';
+
+const environmentSchema = z.object({
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
+  PORT: z
+    .string()
+    .default('3000')
+    .transform(Number)
+    .pipe(z.number().min(1000).max(65535)),
+  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
+
+  // JWT Configuration
+  JWT_SECRET: z.string().min(32, 'JWT secret must be at least 32 characters'),
+  JWT_EXPIRES_IN: z.string().default('1h'),
+  JWT_REFRESH_SECRET: z.string().optional(),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+});
+
+export type EnvironmentVariables = z.infer<typeof environmentSchema>;
+
+export function validateEnvironment(config: Record<string, unknown>) {
+  const result = environmentSchema.safeParse(config);
+
+  if (!result.success) {
+    const errors = result.error.issues
+      .map((err) => `${err.path.join('.')}: ${err.message}`)
+      .join('\n');
+
+    throw new Error(`Environment validation failed:\n${errors}`);
+  }
+
+  return result.data;
+}
+```
+
+#### 2. Add JWT Configuration (`configuration.ts`)
+
+```tsx
+import { registerAs } from '@nestjs/config';
+
+export const appConfig = registerAs('app', (): AppConfiguration => {
+  const env = process.env.NODE_ENV as 'development' | 'production' | 'test';
+
+  // Helper function to get JWT configuration
+  const getJwtConfig = (): JwtConfig => ({
+    secret: process.env.JWT_SECRET!,
+    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+    refreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!,
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+  });
+
+  return {
+    // Existing basic configuration
+    env,
+    port: parseInt(`${process.env.PORT}`, 10) || 3000,
+    isDevelopment: env === 'development',
+    isProduction: env === 'production',
+    isTest: env === 'test',
+    logLevel: (process.env.LOG_LEVEL as LogLevel) || 'info',
+
+    // JWT configuration
+    jwt: getJwtConfig(),
+  };
+});
+
+// Updated type definitions
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+
+export interface JwtConfig {
+  secret: string;
+  expiresIn: string;
+  refreshSecret: string;
+  refreshExpiresIn: string;
+}
+
+export interface AppConfiguration {
+  // Basic configuration
+  env: 'development' | 'production' | 'test';
+  port: number;
+  isDevelopment: boolean;
+  isProduction: boolean;
+  isTest: boolean;
+  logLevel: LogLevel;
+
+  // JWT configuration
+  jwt: JwtConfig;
+}
+```
+
+#### 3. Update Typed Configuration Service (`config.service.ts`)
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+import { AppConfiguration, JwtConfig, LogLevel } from './configuration';
+
+@Injectable()
+export class TypedConfigService {
+  constructor(private configService: ConfigService) {}
+
+  get app(): AppConfiguration {
+    return this.configService.get<AppConfiguration>('app')!;
+  }
+
+  get jwt(): JwtConfig {
+    return this.app.jwt;
+  }
+
+  get logLevel(): LogLevel {
+    return this.app.logLevel;
+  }
+
+  // Environment utility methods
+  isDevelopment(): boolean {
+    return this.app.isDevelopment;
+  }
+
+  isProduction(): boolean {
+    return this.app.isProduction;
+  }
+
+  isTest(): boolean {
+    return this.app.isTest;
+  }
+
+  getPort(): number {
+    return this.app.port;
+  }
+
+  // JWT utility methods
+  getJwtSecret(): string {
+    return this.jwt.secret;
+  }
+
+  getJwtExpiresIn(): string {
+    return this.jwt.expiresIn;
+  }
+
+  getJwtRefreshSecret(): string {
+    return this.jwt.refreshSecret;
+  }
+
+  getJwtRefreshExpiresIn(): string {
+    return this.jwt.refreshExpiresIn;
+  }
+
+  // Logging utility methods
+  shouldLog(level: LogLevel): boolean {
+    const levels: Record<LogLevel, number> = {
+      error: 0,
+      warn: 1,
+      info: 2,
+      debug: 3,
+    };
+
+    const currentLevel = levels[this.logLevel];
+    const targetLevel = levels[level];
+
+    return targetLevel <= currentLevel;
+  }
+}
+```
+
+#### 4. Update Auth Module (`auth.module.ts`)
+
+```tsx
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+
+import { TypedConfigService } from '@/common/config/config.service';
+import { AuthController } from '@/modules/auth/auth.controller';
+import { AuthService } from '@/modules/auth/auth.service';
+import { UsersModule } from '@/modules/users/users.module';
+
+@Module({
+  imports: [
+    UsersModule,
+    // JwtModule.registerAsync({
+    //   inject: [TypedConfigService],
+    //   useFactory: (configService: TypedConfigService) => ({
+    //     secret: configService.jwt.secret,
+    //     signOptions: {
+    //       expiresIn: configService.jwt.expiresIn,
+    //     },
+    //   }),
+    // }),
+    JwtModule.registerAsync({
+      inject: [TypedConfigService],
+      useFactory: (configService: TypedConfigService) => ({
+        secret: configService.getJwtSecret(),
+        signOptions: {
+          expiresIn: configService.getJwtExpiresIn(),
+        },
+      }),
+    }),
+  ],
+  providers: [AuthService],
+  controllers: [AuthController],
+  exports: [AuthService],
+})
+export class AuthModule {}
+```
+
+#### 5. Update Environment Files
+
+##### `.env`
+
+```text
+# Application Environment
+NODE_ENV=development
+
+# Server Configuration
+PORT=3000
+
+# Logging Configuration
+LOG_LEVEL=info
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters-long
+JWT_EXPIRES_IN=1h
+JWT_REFRESH_SECRET=your-refresh-token-secret-key-32-chars
+JWT_REFRESH_EXPIRES_IN=7d
+```
+
+#### 🔒 Security Notes
+
+1. **JWT Secret**: Must be at least 32 characters long and cryptographically secure
+2. **Environment-specific secrets**: Use different secrets for different environments
+3. **Production secret**: Should be generated using a secure random generator
+4. **Never commit secrets**: Ensure `.env*` files are in `.gitignore`
+
+#### Generate Secure JWT Secret
+
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+This setup gives you type-safe, validated JWT configuration that integrates seamlessly with your existing environment management system.
+
+You need to register the `JwtModule` module in the `AuthModule` by providing the unique secret key. We will use this secret key to decode the token or validate the token
+
+### Refactor the `AuthService`
+
+`auth.service.ts`
+
+```tsx
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
+
+import { LoginDTO } from './dto/login.dto';
+
+import { UsersService } from '@/modules/users/users.service';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private userService: UsersService,
+    private jwtService: JwtService,
+  ) {}
+
+  async login(loginDTO: LoginDTO): Promise<{ accessToken: string }> {
+    const user = await this.userService.findOne(loginDTO);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const passwordMatched = await bcrypt.compare(
+      loginDTO.password,
+      user.password,
+    );
+
+    if (!passwordMatched) {
+      throw new UnauthorizedException('Invalid credentials'); // Generic message for security
+    }
+
+    const payload = { email: user.email, sub: user.id };
+    return {
+      accessToken: this.jwtService.sign(payload),
+    };
+  }
+}
+```
+
+1. Inject `JwtService` as a dependency.
+2. If the password matches, generate the JWT token using the `jwtService.sign` method.
+3. Provide the payload, which should include the user email and `userId` inside the `JWT token`. Choose a name for the user ID field; 'sub' is used here but any name can be applied.
+
+### Create JWT Strategy Service
+
+`jwt.strategy.ts`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+
+import { TypedConfigService } from '@/common/config/config.service';
+
+interface JwtPayload {
+  sub: string;
+  email: string;
+  iat?: number;
+  exp?: number;
+}
+
+interface ValidatedUser {
+  userId: string;
+  email: string;
+}
+
+@Injectable()
+export class JWTStrategy extends PassportStrategy(Strategy) {
+  constructor(private configService: TypedConfigService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: configService.getJwtSecret(),
+    });
+  }
+
+  validate(payload: JwtPayload): ValidatedUser {
+    return { userId: payload.sub, email: payload.email };
+  }
+}
+```
+
+Create the `JWTStrategy` service, extending it with `PassportStrategy`. When applying
+`@AuthGuard('jwt')`, the validate function will be called, automatically adding the `userId`
+and `email` to the `req.user` object.
+
+### Register the `JWTStrategy` in `AuthModule`
+
+`auth.module.ts`
+
+```tsx
+import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+
+import { TypedConfigService } from '@/common/config/config.service';
+import { AuthController } from '@/modules/auth/auth.controller';
+import { AuthService } from '@/modules/auth/auth.service';
+import { JWTStrategy } from '@/modules/auth/jwt.strategy';
+import { UsersModule } from '@/modules/users/users.module';
+
+@Module({
+  imports: [
+    UsersModule,
+    JwtModule.registerAsync({
+      useFactory: (configService: ConfigService) => {
+        const appConfig = configService.get('app');
+        return {
+          secret: appConfig.jwt.secret,
+          signOptions: {
+            expiresIn: appConfig.jwt.expiresIn,
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [AuthService, JWTStrategy, TypedConfigService],
+  controllers: [AuthController],
+  exports: [AuthService],
+})
+export class AuthModule {}
+```
+
+You have to register the `JWTStrategy` as a provider in `AuthModule`. You also have to register the `PassportModule`. It will allow us to use the `PassportStrategy` class.
+
+### Create JWT Guard
+
+A Guard is like a middleware in express.js. You can implement role-based authentication using guards
+
+`jwt.guard.ts`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {}
+```
+
+Let's create a provider which is `JwtAuthGuard`. You have to apply the `JWTAuthGuard` to protect a private route
+
+### Protect Private Route in `AppController`
+
+```tsx
+import { Controller, Get, Request, UseGuards } from '@nestjs/common';
+
+import { AppService } from '@/app.service';
+import { JwtAuthGuard } from '@/modules/auth/jwt.guard';
+
+interface AuthenticatedUser {
+  userId: string;
+  email: string;
+}
+
+interface AuthenticatedRequest extends Request {
+  user: AuthenticatedUser;
+}
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  getProfile(@Request() req: AuthenticatedRequest): AuthenticatedUser {
+    return req.user;
+  }
+}
+```
+
+Create a new protected route inside the `AppController`. When sending a request to access the profile, the response will include the user ID and email. Apply `JwtAuthGuard` to any route in any controller to secure the endpoint.
+
+### Test the Application
+
+```bash
+GET <http://localhost:3000/profile>
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhaWRlcl9hbGkzQGdtYWlsLmNvbSIsInN1YiI6NywiaWF0IjoxNjg0MjM3ODgzLCJleHAiOjE2ODQzMjQyODN9.DztMDAKZOnQjZPFkFPiWiJUmI_VnrNfNvfwPI0yJ8MA
+
+```
+
+First, send a login request to obtain the token, and then provide that token in the header.

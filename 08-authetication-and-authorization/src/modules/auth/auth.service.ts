@@ -1,27 +1,37 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { instanceToPlain } from 'class-transformer';
 
 import { LoginDTO } from './dto/login.dto';
 
-import { User } from '@/modules/users/user.entity';
 import { UsersService } from '@/modules/users/users.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private userService: UsersService) {}
+  constructor(
+    private userService: UsersService,
+    private jwtService: JwtService,
+  ) {}
 
-  async login(loginDTO: LoginDTO): Promise<User> {
+  async login(loginDTO: LoginDTO): Promise<{ accessToken: string }> {
     const user = await this.userService.findOne(loginDTO);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const passwordMatched = await bcrypt.compare(
       loginDTO.password,
       user.password,
     );
 
-    if (passwordMatched) {
-      return instanceToPlain(user) as User; // Assumes @Exclude on password in User entity
-    } else {
-      throw new UnauthorizedException('Password does not match');
+    if (!passwordMatched) {
+      throw new UnauthorizedException('Invalid credentials'); // Generic message for security
     }
+
+    const payload = { email: user.email, sub: user.id };
+    return {
+      accessToken: this.jwtService.sign(payload),
+    };
   }
 }
