@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 
 import { TypedConfigService } from '@/common/config/config.service';
+import { ArtistsModule } from '@/modules/artists/artists.module';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
 import { JWTStrategy } from '@/modules/auth/jwt.strategy';
@@ -23,6 +24,7 @@ import { UsersModule } from '@/modules/users/users.module';
       },
       inject: [ConfigService],
     }),
+    ArtistsModule,
   ],
   providers: [AuthService, JWTStrategy, TypedConfigService],
   controllers: [AuthController],

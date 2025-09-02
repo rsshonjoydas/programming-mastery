@@ -812,3 +812,249 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhaWRlc
 ```
 
 First, send a login request to obtain the token, and then provide that token in the header.
+
+## RBAC Authentication
+
+### What is role-base access control
+
+Role-based authentication is a method of access control that regulates user permissions and privileges within a system based on their assigned roles. In this approach, users are categorized into roles based on their job responsibilities, functions, or levels of authority within an organization.
+
+Each role is associated with a set of permissions that determine what actions and resources a user with that role can access. These permissions can include read, write, modify, delete, and other operations on various system resources such as files, databases, or functionalities.
+
+### We are going to implement this scenario
+
+- An artist can `upload/create` the song.
+
+We have to restrict the access of creating songs endpoint. Only artists can access this endpoint and create a song
+
+### Create an Artists Module
+
+```tsx
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { Artist } from './artist.entity';
+import { ArtistsController } from './artists.controller';
+import { ArtistsService } from './artists.service';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Artist])],
+  providers: [ArtistsService],
+  controllers: [ArtistsController],
+  exports: [ArtistsService],
+})
+export class ArtistsModule {}
+```
+
+### Import `ArtistsModule`
+
+#### into `AppModule`
+
+```tsx
+ @Module({
+  imports: [
+    SongsModule,
+   PlayListModule,
+   UsersModule,
+   AuthModule,
+   ArtistsModule,
+  ],
+})
+```
+
+#### into `AuthModule`
+
+```tsx
+ @Module({
+  imports: [
+    ...
+   ArtistsModule,
+  ],
+})
+```
+
+### Create `ArtistsService`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
+import { Artist } from './artist.entity';
+
+@Injectable()
+export class ArtistsService {
+  constructor(
+    @InjectRepository(Artist)
+    private artistRepo: Repository<Artist>,
+  ) {}
+
+  findArtist(userId: number): Promise<Artist | null> {
+    return this.artistRepo.findOneBy({ user: { id: userId } });
+  }
+}
+```
+
+We will use the `findArtist` method to check if the current logged in user is an artist or not.
+
+### Refactor login method in `AuthService`
+
+```tsx
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
+
+import { JwtPayload } from './auth.type';
+import { LoginDTO } from './dto/login.dto';
+
+import { ArtistsService } from '@/modules/artists/artists.service';
+import { UsersService } from '@/modules/users/users.service';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private userService: UsersService,
+    private jwtService: JwtService,
+    private artistsService: ArtistsService,
+  ) {}
+
+  async login(loginDTO: LoginDTO): Promise<{ accessToken: string }> {
+    const user = await this.userService.findOne(loginDTO);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const passwordMatched = await bcrypt.compare(
+      loginDTO.password,
+      user.password,
+    );
+
+    if (!passwordMatched) {
+      throw new UnauthorizedException('Invalid credentials'); // Generic message for security
+    }
+
+    const payload: JwtPayload = { email: user.email, userId: user.id };
+    // find if it is an artist then the add the artist id to payload
+    const artist = await this.artistsService.findArtist(user.id);
+    if (artist) {
+      payload.artistId = artist.id;
+    }
+
+    return {
+      accessToken: this.jwtService.sign(payload),
+    };
+  }
+}
+```
+
+1. Refactor the payload method in the login function by changing `sub: user.id` to `userId:
+user.id`.
+2. Find the artist based on the logged-in user.
+3. If the user is an artist, save the artist ID in the payload; this artist ID will be used when decoding the token in the `ArtistGuard`.
+
+### Create a new `JwtArtistGuard`
+
+In Nest.js, implementing role-based authentication involves the use of guard functions, which act as middleware to authorize requests. Each role can be associated with a distinct guard function that validates whether a user has the appropriate permissions to access a resource. This is an application of the "Single Responsibility Principle," as each guard function focuses solely on authorizing a specific role, making the code easier to manage and extend.
+
+`auth/jwt-artist.guard.ts`
+
+```tsx
+import {
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { Observable } from 'rxjs';
+
+import { JwtPayload } from './auth.type';
+
+@Injectable()
+export class JwtArtistGuard extends AuthGuard('jwt') {
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | Observable<boolean> {
+    return super.canActivate(context);
+  }
+  handleRequest<TUser = JwtPayload>(err: any, user: JwtPayload): TUser {
+    if (err || !user) {
+      throw err || new UnauthorizedException();
+    }
+    console.log(user);
+    if (user.artistId) {
+      return user as unknown as TUser;
+    }
+    throw err || new UnauthorizedException();
+  }
+}
+```
+
+1. When you apply the `JwtAuthGuard` at the controller function it will call the `handleRequest` function
+2. If there is an error or no user then it will send the unauthorized error
+3. Here we are checking the user role, if it is an artist then we have to return the user. This user will have have `email`, `userId`, and `artistId` property
+
+### Refactor the validate method in `JwtStrategy`
+
+```tsx
+  validate(payload: JwtPayload) {
+    return {
+      userId: payload.userId,
+      email: payload.email,
+      artistId: payload.artistId,
+    };
+  }
+```
+
+1. Add the `payloadType` for the argument.
+2. Include `artistId` in the response; note that `artistId` is an optional property and may be null.
+
+### Apply `JwtArtistGuard` on creating songs endpoint
+
+`songs.controller.ts`
+
+```tsx
+  @Post()
+  @UseGuards(JwtArtistGuard)
+  create(@Body() createSongDTO: CreateSongDTO, @Request() req): Promise<Song> {
+    console.log(req.user);
+    return this.songsService.create(createSongDTO);
+  }
+```
+
+Now we have protected this endpoint, only artist can access this endpoint and create a new song
+
+### Test the Application
+
+1. First of all you must have an artist record in your DB
+2. If you don't have you can create an artist manually using pgAdmin
+3. You have to send the login request as an artist
+4. It will give you the access token you have to use that token to access to Create Songs endpoint
+
+#### Artist Login User
+
+```tsx
+POST http://localhost:3001/auth/login
+
+{
+  "email": "john_doe@gmail.com",
+  "password": "123456"
+}
+```
+
+It will give you the token, you have to use that token to create a new song
+
+#### Create New SONGS REQUEST as An Artist
+
+```tsx
+POST http://localhost:3001/songs
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhaWRlcl9hbGkzQGdtYWlsLmNvbSIsInVzZXJJZCI6NywiaWF0IjoxNjg0MzA3Mjg3LCJleHAiOjE2ODQzOTM2ODd9.A9SEhTH0O0SR5-UELhMhak5MVIyY2ISRwR-o2RKF_dY
+
+{
+ "title": "You for me",
+ "artists": [1],
+ "releasedDate" : "2022-08-29",
+ "duration" :"02:34",
+ "lyrics": "by, you're my adrenaline. Brought out this other side of me You don't even know Controlling my whole anatomy, oh Fingers are holding you right at the edge You're slipping out of my hands Keeping my secrets all up in my head I'm scared that you won't want me back, oh I dance to every song like it's about ya I drink 'til I kiss someone who looks like ya I wish that I was honest when I had you I shoulda told you that I wanted you for me I dance to every song like it's about ya I drink 'til I kiss someone who looks like ya"
+}
+```

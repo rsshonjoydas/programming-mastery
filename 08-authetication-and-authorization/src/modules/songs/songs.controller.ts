@@ -10,11 +10,14 @@ import {
   Put,
   Query,
   Req,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
-import { type Request } from 'express';
+import { type Request as ExpressRequest } from 'express';
 import { Pagination } from 'nestjs-typeorm-paginate';
 import { DeleteResult } from 'typeorm';
 
+import { JwtArtistGuard } from '../auth/jwt-artist.guard';
 import { CreateSongDTO } from './dto/create-song.dto';
 import { UpdateSongDTO } from './dto/update-song.dto';
 import { Song } from './song.entity';
@@ -25,7 +28,9 @@ export class SongsController {
   constructor(private songsService: SongsService) {}
 
   @Post()
-  create(@Body() createSongDTO: CreateSongDTO): Promise<Song> {
+  @UseGuards(JwtArtistGuard)
+  create(@Body() createSongDTO: CreateSongDTO, @Request() req): Promise<Song> {
+    console.log(req.user);
     return this.songsService.create(createSongDTO);
   }
 
@@ -35,7 +40,7 @@ export class SongsController {
     page = 1,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe)
     limit = 10,
-    @Req() request: Request,
+    @Req() request: ExpressRequest,
   ): Promise<Pagination<Song>> {
     limit = limit > 100 ? 100 : limit;
 

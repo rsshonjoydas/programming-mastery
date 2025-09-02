@@ -9,6 +9,7 @@ import { TypedConfigService } from '@/common/config/config.service';
 import { appConfig } from '@/common/config/configuration';
 import { validateEnvironment } from '@/common/config/env.validation';
 import { Artist } from '@/modules/artists/artist.entity';
+import { ArtistsModule } from '@/modules/artists/artists.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { Playlist } from '@/modules/playlists/playlist.entity';
 import { PlayListModule } from '@/modules/playlists/playlists.module';
@@ -50,6 +51,7 @@ import { LoggerMiddleware } from '@/shared/interceptors/logger.middleware';
     PlayListModule,
     AuthModule,
     UsersModule,
+    ArtistsModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
