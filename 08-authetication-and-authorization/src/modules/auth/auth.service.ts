@@ -8,6 +8,7 @@ import { Enable2FAType, JwtPayload } from './auth.type';
 import { LoginDTO } from './dto/login.dto';
 
 import { ArtistsService } from '@/modules/artists/artists.service';
+import { User } from '@/modules/users/user.entity';
 import { UsersService } from '@/modules/users/users.service';
 
 @Injectable()
@@ -122,5 +123,9 @@ export class AuthService {
 
   async disable2FA(userId: number): Promise<UpdateResult> {
     return this.userService.disable2FA(userId);
+  }
+
+  async validateUserByApiKey(apiKey: string): Promise<User | null> {
+    return this.userService.findByApiKey(apiKey);
   }
 }

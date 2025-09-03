@@ -1389,3 +1389,220 @@ You have to refactor the return type. If the user has enabled the 2FA it will us
 
 1. You have to add a new code here to check user enabled the 2FA.
 2. If the user enabled the 2FA then we have to send the link to validate the token from your QR code app
+
+## API Key Authentication
+
+### What is an API Key Authentication
+
+API key authentication is a method of authenticating and securing access to an application programming interface (API). It involves the use of an API key, which is a unique identifier that grants access to specific API resources and operations.
+
+The purpose of API key authentication is to control and monitor access to an API by assigning and managing unique keys for individual users or applications.
+
+API keys serve as a form of credential, allowing the API provider to track and control API usage, enforce rate limits, and monitor and identify unauthorized access attempts.
+
+### When do you need API Keys
+
+- You want to control the number of calls made to your API.
+- You want to identify usage patterns in your API's traffic
+
+API key authentication is typically used in scenarios where multiple users or applications need to access an API.
+
+It enables the API provider to identify and track the usage of different clients, which can be beneficial for managing access levels, implementing usage quotas, and identifying potential abuse or security breaches.
+
+### Where can we use API Keys
+
+API key authentication can be used in a variety of contexts, including web and mobile applications, microservices, and third-party integrations.
+
+It is commonly employed by API providers to ensure secure and controlled access to their services. By requiring API keys, providers can track usage, enforce restrictions, and have the flexibility to revoke access for specific keys if necessary.
+
+### Complete Flow of API Key Authentication
+
+1. The client initiates a request to access an API resource or perform an operation.
+2. The client includes the API key as part of the request. This can be done in various ways, such as including the key in the request header, query parameters, or as part of the request body.
+3. The API server receives the request and extracts the API key.
+4. The API server verifies the API key's validity and authenticity. This verification process may involve checking against a database or performing cryptographic operations.
+5. If the API key is valid, the server grants access to the requested resources or operations based on the permissions associated with that key. If the key is invalid or expired, the server denies access and returns an appropriate error response.
+6. The API server processes the client's request and returns the requested data or performs the requested operation.
+7. The client receives the response from the API server and can continue interacting with the API if the authentication was successful.
+
+#### Steps
+
+Step 1: Generate API Keys
+
+Step 2: Create and Store API key
+
+Step 3: Create an API Key strategy
+
+Step 4: Register API key strategy in Auth Module
+
+Step 5: Validate the User by API key
+
+Step 6: Apply API key Authentication on protected Route
+
+#### Step 1: Generate API Keys
+
+First of all, we have to generate API keys. I am going to use a third third-party package `uuid` to create unique `api` keys.
+
+We have installed the `passport-http-bearer` package and applied this strategy to validate the API keys. It means you need to provide the `API` key in the authorization header:
+
+`Authorization: Bearer 853d94a2-f760-43e3-b384-a9ba94542bf0`
+
+**Install Dependencies**
+
+```bash
+pnpm i uuid passport-http-bearer
+```
+
+#### Step 2: Create and Store the API key
+
+Now we need to create an API Key and store it in the database. Each user will have its own API key. We need to add `api` key logic in the signup function. When the user is registered we have to assign the unique `api` key
+
+`user.entity.ts`
+
+```tsx
+@Column()
+apiKey: string;
+```
+
+`create-user.dto.ts`
+
+```tsx
+@IsString()
+@IsOptional()
+apiKey: string;
+```
+
+`users.service.ts`
+
+```tsx
+import { v4 as uuid4 } from "uuid";
+
+  async create(createUserDTO: CreateUserDTO): Promise<User> {
+    const salt = await bcrypt.genSalt();
+    createUserDTO.password = await bcrypt.hash(createUserDTO.password, salt);
+    createUserDTO.apiKey = await uuid();
+    const savedUser = await this.userRepository.save(createUserDTO);
+
+    // instanceToPlain will automatically exclude @Exclude decorated fields
+    return instanceToPlain(savedUser) as User;
+  }
+```
+
+I have called the `uuid4()` to create the `Api` key.
+
+**Let's test the application by sending a signup `api` request**
+
+`Request`
+
+```json
+ POST http://localhost:3001/auth/signup
+
+{
+  "firstName": "Martin",
+  "lastName": "Garrix",
+  "email": "martin@gmail.com",
+  "password": "123456"
+}
+```
+
+`Response`
+
+```json
+{
+  "firstName": "Martin",
+  "lastName": "Garrix",
+  "email": "martin@gmail.com",
+  "password": "$2b$10$Nh042EK3V6MUd/Sh1Cc9XeNDZ/FVAWPVbFn.TYhDYVY/O/lD1r2J2",
+  "apiKey": "d4eb798d-3e4c-43aa-8d2c-ab6c6afcc423",
+  "twoFASecret": null,
+  "id": 1,
+  "enable2FA": false
+}
+```
+
+#### Step 3: Create an API Key strategy
+
+You have to create a new file `auth/api-key.strategy.ts` in the auth folder
+
+```tsx
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { Strategy } from 'passport-http-bearer';
+
+import { AuthService } from './auth.service';
+@Injectable()
+export class ApiKeyStrategy extends PassportStrategy(Strategy) {
+  constructor(private authService: AuthService) {
+    super();
+  }
+  async validate(apiKey: string) {
+    const user = await this.authService.validateUserByApiKey(apiKey);
+    if (!user) {
+      throw new UnauthorizedException();
+    } else {
+      return user;
+    }
+  }
+}
+```
+
+When you will apply the `AuthGuard` `@UseGuards(AuthGuard('bearer'))` to the protected route. It will call the validate method from the `ApiKeyStrategy`
+
+#### Step 4: Register API key strategy in Auth Module
+
+```tsx
+import { ApiKeyStrategy } from './api-key.strategy';
+
+providers: [AuthService, JWTStrategy, ApiKeyStrategy],
+```
+
+#### Step 5: Validate the User by API key
+
+`auth.service.ts`
+
+```tsx
+  async validateUserByApiKey(apiKey: string): Promise<User | null> {
+    return this.userService.findByApiKey(apiKey);
+  }
+```
+
+I have created a new function inside the auth service and validated the user by api key
+
+`user.service.ts`
+
+```tsx
+  async findByApiKey(apiKey: string): Promise<User | null> {
+    return this.userRepository.findOneBy({ apiKey });
+  }
+```
+
+Let's create a new function inside the `user.service.ts` to fetch the user from the DB based on API Key
+
+#### Step 6: Apply API key Authentication on protected Route
+
+`auth.controller.ts`
+
+```tsx
+  @Get('profile')
+  @UseGuards(AuthGuard('bearer'))
+  getProfile(
+    @Request()
+    req,
+  ) {
+    delete req.user.password;
+    return {
+      msg: 'authenticated with api key',
+      user: req.user,
+    };
+  }
+```
+
+A user can access his/her profile. He has to provide the API key to access the protected route. You can protect any route by applying the `AuthGuard('bearer')` to the route
+
+```json
+GET http://localhost:3001/auth/profile
+
+Authorization: Bearer 853d94a2-f760-43e3-b384-a9ba94542bf0
+```
+
+You have to provide the API key in the authorization header to execute the request successfully.

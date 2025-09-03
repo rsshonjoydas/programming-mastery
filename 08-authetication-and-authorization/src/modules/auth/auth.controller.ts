@@ -6,6 +6,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { UpdateResult } from 'typeorm';
 
 import { AuthService } from './auth.service';
@@ -71,5 +72,18 @@ export class AuthController {
     req,
   ): Promise<UpdateResult> {
     return this.authService.disable2FA(+req.user.userId);
+  }
+
+  @Get('profile')
+  @UseGuards(AuthGuard('bearer'))
+  getProfile(
+    @Request()
+    req,
+  ) {
+    delete req.user.password;
+    return {
+      msg: 'authenticated with api key',
+      user: req.user,
+    };
   }
 }

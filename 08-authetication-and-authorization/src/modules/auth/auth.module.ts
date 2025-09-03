@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { TypedConfigService } from '@/common/config/config.service';
 import { ArtistsModule } from '@/modules/artists/artists.module';
+import { ApiKeyStrategy } from '@/modules/auth/api-key.strategy';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { AuthService } from '@/modules/auth/auth.service';
 import { JWTStrategy } from '@/modules/auth/jwt.strategy';
@@ -26,7 +27,7 @@ import { UsersModule } from '@/modules/users/users.module';
     }),
     ArtistsModule,
   ],
-  providers: [AuthService, JWTStrategy, TypedConfigService],
+  providers: [AuthService, JWTStrategy, TypedConfigService, ApiKeyStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

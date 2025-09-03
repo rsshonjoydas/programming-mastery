@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { instanceToPlain } from 'class-transformer';
 import { Repository, UpdateResult } from 'typeorm';
+import { v4 as uuid } from 'uuid';
 
 import { CreateUserDTO } from './dto/create-user.dto';
 import { User } from './user.entity';
@@ -16,6 +17,7 @@ export class UsersService {
   async create(createUserDTO: CreateUserDTO): Promise<User> {
     const salt = await bcrypt.genSalt();
     createUserDTO.password = await bcrypt.hash(createUserDTO.password, salt);
+    createUserDTO.apiKey = uuid();
     const savedUser = await this.userRepository.save(createUserDTO);
 
     // instanceToPlain will automatically exclude @Exclude decorated fields
@@ -52,5 +54,9 @@ export class UsersService {
         twoFASecret: null,
       },
     );
+  }
+
+  async findByApiKey(apiKey: string): Promise<User | null> {
+    return this.userRepository.findOneBy({ apiKey });
   }
 }
