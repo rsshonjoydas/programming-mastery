@@ -1216,3 +1216,90 @@ POST http://localhost:3000/auth/enable-2fa
 
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhaWRlcl9hbGkzQGdtYWlsLmNvbSIsInN1YiI6NywiaWF0IjoxNjg0NDEyMjk2LCJleHAiOjE2ODQ0OTg2OTZ9.Fg0K4gJABBP3nqt8PMK72MzSnFVK0xRaEeC_aDxnfeo
 ```
+
+## Verify One-time password/token
+
+`auth.controller.ts`
+
+```tsx
+  @Post('validate-2fa')
+  @UseGuards(JwtAuthGuard)
+  validate2FA(
+    @Request()
+    req,
+    @Body()
+    ValidateTokenDTO: ValidateTokenDTO,
+  ): Promise<{ verified: boolean }> {
+    return this.authService.validate2FAToken(
+      +req.user.userId,
+      ValidateTokenDTO.token,
+    );
+  }
+```
+
+You have to create an endpoint to validate the one-time `password/token`
+
+`auth/dto/validate-token.dto.ts`
+
+```tsx
+import { IsNotEmpty, IsString } from 'class-validator';
+
+export class ValidateTokenDTO {
+  @IsNotEmpty()
+  @IsString()
+  token: string;
+}
+```
+
+Now you have to create a new method inside the `auth.service.ts` to verify the token
+
+```tsx
+  // validate the 2fa secret with provided token
+  async validate2FAToken(
+    userId: number,
+    token: string,
+  ): Promise<{ verified: boolean }> {
+    try {
+      // Find the user on the based on id
+      const user = await this.userService.findById(userId);
+
+      // Add null check for user
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // extract his 2FA secret
+      // verify the secret with a token by calling the speakeasy verify method
+      const verified = speakeasy.totp.verify({
+        secret: user.twoFASecret,
+        token: token,
+        encoding: 'base32',
+      });
+
+      // if validated then sends the json web token in the response
+      if (verified) {
+        return { verified: true };
+      } else {
+        return { verified: false };
+      }
+    } catch {
+      throw new UnauthorizedException('Error verifying token');
+    }
+  }
+```
+
+Let's test the validate token endpoint.
+
+### Test Validate 2FA Token
+
+```json
+POST http://localhost:3000/auth/validate-2fa
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhbUBnbWFpbC5jb20iLCJzdWIiOjksImlhdCI6MTY4NDQ5ODg0MSwiZXhwIjoxNjg0NTg1MjQxfQ.dKgmLSsGctbWR9HKz3ByfS2ZpUGiNR234u qEgs0pgtQ
+
+{
+  "token": "054603"
+}
+```
+
+The token I have provided is one-time password/token from the authenticator app. You have to provide your unique token from your authenticator app

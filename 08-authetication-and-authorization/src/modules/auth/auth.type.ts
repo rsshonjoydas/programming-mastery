@@ -5,3 +5,7 @@ export interface JwtPayload {
   iat?: number;
   exp?: number;
 }
+
+export type Enable2FAType = {
+  secret: string;
+};
