@@ -1,8 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import * as speakeasy from 'speakeasy';
 
-import { JwtPayload } from './auth.type';
+import { Enable2FAType, JwtPayload } from './auth.type';
 import { LoginDTO } from './dto/login.dto';
 
 import { ArtistsService } from '@/modules/artists/artists.service';
@@ -42,5 +43,26 @@ export class AuthService {
     return {
       accessToken: this.jwtService.sign(payload),
     };
+  }
+
+  async enable2FA(userId: number): Promise<Enable2FAType> {
+    // Find the user based on id
+    const user = await this.userService.findById(userId);
+
+    // Add null check for user
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (user.enable2FA) {
+      return { secret: user.twoFASecret };
+    }
+
+    const secret = speakeasy.generateSecret();
+    console.log(secret);
+    user.twoFASecret = secret.base32;
+    await this.userService.updateSecretKey(user.id, user.twoFASecret);
+
+    return { secret: user.twoFASecret };
   }
 }
