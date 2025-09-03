@@ -18,7 +18,11 @@ export class AuthService {
     private artistsService: ArtistsService,
   ) {}
 
-  async login(loginDTO: LoginDTO): Promise<{ accessToken: string }> {
+  async login(
+    loginDTO: LoginDTO,
+  ): Promise<
+    { accessToken: string } | { validate2FA: string; message: string }
+  > {
     const user = await this.userService.findOne(loginDTO);
 
     if (!user) {
@@ -39,6 +43,17 @@ export class AuthService {
     const artist = await this.artistsService.findArtist(user.id);
     if (artist) {
       payload.artistId = artist.id;
+    }
+
+    // If user has enabled 2FA and have the secret key then
+    if (user.enable2FA && user.twoFASecret) {
+      // sends the validateToken request link
+      // else otherwise sends the json web token in the response
+      return {
+        validate2FA: 'http://localhost:3000/auth/validate-2fa',
+        message:
+          'Please send the one-time password/token from your Google Authenticator App',
+      };
     }
 
     return {

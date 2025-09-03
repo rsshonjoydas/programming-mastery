@@ -1352,3 +1352,40 @@ GET http://localhost:3000/auth/disable-2fa
 
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhaWRlcl9hbGkzQGdtYWlsLmNvbSIsInN1YiI6NywiaWF0IjoxNjg0NDkyOTk1LCJleHAiOjE2ODQ1NzkzOTV9.vhAHpdyuQHWvsET2sSLvQpr33vpk8K089NLiENgh7pM
 ```
+
+### If user enabled the 2FA refactor the login method
+
+The token I have provided is one-time password/token from the authenticator app. You have to provide your unique token from your authenticator app
+
+`auth.service.ts`
+
+```tsx
+  async login(
+    loginDTO: LoginDTO,
+  ): Promise<
+    { accessToken: string } | { validate2FA: string; message: string }
+  > {
+   // existing code...
+
+   // new code...
+    // If user has enabled 2FA and have the secret key then
+    if (user.enable2FA && user.twoFASecret) {
+      // sends the validateToken request link
+      // else otherwise sends the json web token in the response
+      return {
+        validate2FA: 'http://localhost:3000/auth/validate-2fa',
+        message:
+          'Please send the one-time password/token from your Google Authenticator App',
+      };
+    }
+
+    return {
+      accessToken: this.jwtService.sign(payload),
+    };
+  }
+```
+
+You have to refactor the return type. If the user has enabled the 2FA it will use the second return type with a custom message
+
+1. You have to add a new code here to check user enabled the 2FA.
+2. If the user enabled the 2FA then we have to send the link to validate the token from your QR code app
