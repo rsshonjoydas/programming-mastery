@@ -1606,3 +1606,80 @@ Authorization: Bearer 853d94a2-f760-43e3-b384-a9ba94542bf0
 ```
 
 You have to provide the API key in the authorization header to execute the request successfully.
+
+## Custom Decorator for Current User
+
+### `shared/decorators/current-user.decorator.ts`
+
+```tsx
+import { createParamDecorator } from '@nestjs/common';
+
+import type { JwtPayload } from '@/modules/auth/auth.type';
+import type { ExecutionContext } from '@nestjs/common';
+
+// Define authenticated request interface
+interface AuthenticatedRequest {
+  user: JwtPayload;
+}
+
+// Simple version that requires manual typing
+// export const CurrentUser = createParamDecorator(
+//   (property?: keyof JwtPayload, ctx?: ExecutionContext) => {
+//     const request = ctx!.switchToHttp().getRequest<AuthenticatedRequest>();
+//     const user = request.user;
+
+//     if (!user) {
+//       throw new Error('User not found in request');
+//     }
+
+//     return property ? user[property] : user;
+//   },
+// );
+
+// Generic version (most flexible)
+export const CurrentUser = createParamDecorator(
+  <T extends keyof JwtPayload>(property?: T, ctx?: ExecutionContext) => {
+    const request = ctx!.switchToHttp().getRequest<AuthenticatedRequest>();
+    const user = request.user;
+
+    if (!user) {
+      throw new Error('User not found in request');
+    }
+
+    return property ? user[property] : user;
+  },
+);
+```
+
+### Usage example
+
+```tsx
+// Get the entire user object
+@Get('profile')
+@UseGuards(JwtAuthGuard)
+getProfile(@CurrentUser() user: JwtPayload) {
+  return user;
+}
+
+// Get the userId from entire user object
+@Get('disable-2fa')
+@UseGuards(JwtAuthGuard)
+disable2FA(
+  @CurrentUser() user: JwtPayload,
+): Promise<UpdateResult> {
+  return this.authService.disable2FA(user.userId);
+}
+
+// Get specific properties (you need to type them manually)
+@Get('disable-2fa')
+@UseGuards(JwtAuthGuard)
+disable2FA(@CurrentUser('userId') userId: number): Promise<UpdateResult> {
+  return this.authService.disable2FA(userId);
+}
+
+@Get('user-email')
+@UseGuards(JwtAuthGuard)
+getUserEmail(@CurrentUser('email') email: string) {
+  return { email };
+}
+```
