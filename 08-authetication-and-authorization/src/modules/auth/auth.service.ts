@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as speakeasy from 'speakeasy';
+import { UpdateResult } from 'typeorm';
 
 import { Enable2FAType, JwtPayload } from './auth.type';
 import { LoginDTO } from './dto/login.dto';
@@ -102,5 +103,9 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Error verifying token');
     }
+  }
+
+  async disable2FA(userId: number): Promise<UpdateResult> {
+    return this.userService.disable2FA(userId);
   }
 }

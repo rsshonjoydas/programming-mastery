@@ -1217,7 +1217,7 @@ POST http://localhost:3000/auth/enable-2fa
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhaWRlcl9hbGkzQGdtYWlsLmNvbSIsInN1YiI6NywiaWF0IjoxNjg0NDEyMjk2LCJleHAiOjE2ODQ0OTg2OTZ9.Fg0K4gJABBP3nqt8PMK72MzSnFVK0xRaEeC_aDxnfeo
 ```
 
-## Verify One-time password/token
+### Verify One-time password/token
 
 `auth.controller.ts`
 
@@ -1290,7 +1290,7 @@ Now you have to create a new method inside the `auth.service.ts` to verify the t
 
 Let's test the validate token endpoint.
 
-### Test Validate 2FA Token
+#### Test Validate 2FA Token
 
 ```json
 POST http://localhost:3000/auth/validate-2fa
@@ -1303,3 +1303,52 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhbUBnb
 ```
 
 The token I have provided is one-time password/token from the authenticator app. You have to provide your unique token from your authenticator app
+
+### Disable 2-Factor Authentication
+
+You have to new method inside the `auth.service.ts` to disable the authentication
+
+`auth.service.ts`
+
+```tsx
+async disable2FA(userId: number): Promise<UpdateResult> {
+  return this.userService.disable2FA(userId);
+}
+```
+
+`users.service.ts`
+
+```tsx
+  async disable2FA(userId: number): Promise<UpdateResult> {
+    return this.userRepository.update(
+      { id: userId },
+      {
+        enable2FA: false,
+        twoFASecret: null,
+      },
+    );
+  }
+```
+
+You have to create a new route to disable authentication
+
+`auth.controller.ts`
+
+```tsx
+  @Get('disable-2fa')
+  @UseGuards(JwtAuthGuard)
+  disable2FA(
+    @Request()
+    req,
+  ): Promise<UpdateResult> {
+    return this.authService.disable2FA(+req.user.userId);
+  }
+```
+
+#### Test the disabled authentication endpoint
+
+```bash
+GET http://localhost:3000/auth/disable-2fa
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhaWRlcl9hbGkzQGdtYWlsLmNvbSIsInN1YiI6NywiaWF0IjoxNjg0NDkyOTk1LCJleHAiOjE2ODQ1NzkzOTV9.vhAHpdyuQHWvsET2sSLvQpr33vpk8K089NLiENgh7pM
+```

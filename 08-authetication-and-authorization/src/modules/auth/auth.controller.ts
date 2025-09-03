@@ -6,6 +6,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { UpdateResult } from 'typeorm';
 
 import { AuthService } from './auth.service';
 import { Enable2FAType } from './auth.type';
@@ -61,5 +62,14 @@ export class AuthController {
       +req.user.userId,
       ValidateTokenDTO.token,
     );
+  }
+
+  @Get('disable-2fa')
+  @UseGuards(JwtAuthGuard)
+  disable2FA(
+    @Request()
+    req,
+  ): Promise<UpdateResult> {
+    return this.authService.disable2FA(+req.user.userId);
   }
 }
