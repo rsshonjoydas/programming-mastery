@@ -11,6 +11,7 @@ import { validateEnvironment } from '@/common/config/env.validation';
 import { ArtistsModule } from '@/modules/artists/artists.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { PlayListModule } from '@/modules/playlists/playlists.module';
+import { SeedModule } from '@/modules/seed/seed.module';
 import { SongsController } from '@/modules/songs/songs.controller';
 import { SongsModule } from '@/modules/songs/songs.module';
 import { UsersModule } from '@/modules/users/users.module';
@@ -50,6 +51,7 @@ import { dataSourceOptions } from 'db/data-source';
     AuthModule,
     UsersModule,
     ArtistsModule,
+    SeedModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],
