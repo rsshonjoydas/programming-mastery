@@ -55,15 +55,20 @@ export class AuthService {
     }
 
     if (user.enable2FA) {
+      // Handle the case where twoFASecret might be null
+      if (!user.twoFASecret) {
+        throw new Error('2FA is enabled but secret is missing');
+      }
       return { secret: user.twoFASecret };
     }
 
     const secret = speakeasy.generateSecret();
     console.log(secret);
-    user.twoFASecret = secret.base32;
-    await this.userService.updateSecretKey(user.id, user.twoFASecret);
+    const secretBase32 = secret.base32 as string;
+    user.twoFASecret = secretBase32;
+    await this.userService.updateSecretKey(user.id, secretBase32);
 
-    return { secret: user.twoFASecret };
+    return { secret: secretBase32 };
   }
 
   // validate the 2fa secret with provided token
