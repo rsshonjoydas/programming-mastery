@@ -1,0 +1,53 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { DeleteResult, Model } from 'mongoose';
+
+import { CreateSongDTO } from './dto/create-song.dto';
+import { UpdateSongDTO } from './dto/update-song.dto';
+import { Song, SongDocument } from './schemas/song.schema';
+
+@Injectable()
+export class SongsService {
+  constructor(
+    @InjectModel(Song.name)
+    private readonly songModel: Model<SongDocument>,
+  ) {}
+
+  async create(createSongDTO: CreateSongDTO): Promise<Song> {
+    const song = await this.songModel.create(createSongDTO);
+    return song;
+  }
+
+  async find(): Promise<Song[]> {
+    return this.songModel.find();
+  }
+
+  async findById(id: string): Promise<Song> {
+    const song = await this.songModel.findById(id);
+    if (!song) {
+      throw new NotFoundException(`Song with id ${id} not found`);
+    }
+    return song;
+  }
+
+  async update(id: string, updateSongDto: UpdateSongDTO): Promise<Song> {
+    const updatedSong = await this.songModel.findByIdAndUpdate(
+      id,
+      updateSongDto,
+      {
+        new: true, // Return updated document
+        runValidators: true, // Run schema validators
+      },
+    );
+
+    if (!updatedSong) {
+      throw new NotFoundException(`Song with id ${id} not found`);
+    }
+
+    return updatedSong;
+  }
+
+  async delete(id: string): Promise<DeleteResult> {
+    return this.songModel.deleteOne({ _id: id });
+  }
+}

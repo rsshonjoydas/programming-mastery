@@ -1,0 +1,14 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always",
+    "source.organizeImports": "always"
+  },
+  "eslint.workingDirectories": ["."],
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.suggest.autoImports": true,
+  "typescript.suggest.includeCompletionsForImportStatements": true,
+  "workbench.iconTheme": "material-icon-theme", // Set icon theme
+  "material-icon-theme.activeIconPack": "nest" // Use Nest icon pack
+}
