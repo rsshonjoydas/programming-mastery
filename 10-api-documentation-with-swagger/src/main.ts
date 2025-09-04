@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from '@/app.module';
 import { TypedConfigService } from '@/common/config/config.service';
@@ -15,6 +16,16 @@ async function bootstrap() {
 
   // const seedService = app.get(SeedService);
   // await seedService.seed();
+
+  app.useGlobalPipes(new ValidationPipe());
+  //Configure the swagger module here
+  const config = new DocumentBuilder()
+    .setTitle('Spotify Clone')
+    .setDescription('The Spotify Clone Api documentation')
+    .setVersion('1.0')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   const port = configService.getPort();
   await app.listen(port);

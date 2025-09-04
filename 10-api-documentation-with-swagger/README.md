@@ -12,3 +12,37 @@ The components of Swagger include:
 Employing Swagger within `NestJS` promotes a systematic, well-documented, and collaborative API
 development process, reflecting best practices and serving as a foundation for robust software
 architecture.
+
+## Setup Swagger
+
+### Step 1: Install Dependencies
+
+```bash
+pnpm i @nestjs/swagger
+```
+
+The Nest.js built-in package will be utilized to implement API documentation with Swagger. This integration facilitates the automatic generation of interactive API documentation, which is a best practice for maintaining clear and structured endpoint documentation for developers and users alike.
+
+### Step 2: Configure `SwaggerModule` in bootstrap function
+
+`SwaggerModule` configuration takes place within the bootstrap function. This NestJS-specific module automatically generates interactive API documentation, and as a best practice, it's advised to configure Swagger in development environments to aid in API design and testing without compromising the production environment's security.
+
+```tsx
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
+async function bootstrap() {
+  app.useGlobalPipes(new ValidationPipe());
+  //Configure the swagger module here
+  const config = new DocumentBuilder()
+    .setTitle('Spotify Clone')
+    .setDescription('The Spotify Clone Api documentation')
+    .setVersion('1.0')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+}
+```
+
+1. The `DocumentBuilder` is utilized to configure the title, description, and version of the API documentation.
+2. This document is then created with the help of the `SwaggerModule`, which is specific to `NestJS` for API design and testing.
+3. Subsequently, the Swagger document is hosted at the `/api` endpoint, making it accessible via <http://localhost:3000/api>, offering a visual interface for interacting with the API. As a best practice, maintaining up-to-date and comprehensive Swagger documentation ensures that APIs are understandable and usable, aiding in both development and API consumption.
