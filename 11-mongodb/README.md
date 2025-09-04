@@ -1,8 +1,26 @@
-# MongoDB Database
-
 MongoDB serves as an open-source NoSQL database management program, particularly adept at handling extensive sets of distributed data. Learning to integrate MongoDB within a Nest.js application involves using the Mongoose package, which is recommended for its robust modeling and validation tools that are absent in the native driver.
 
 Mongoose operates as an object-oriented JavaScript library that facilitates a connection between MongoDB and the Node.js runtime environment. It simplifies the interaction with MongoDB by providing schema validation and the ability to translate between objects in code and their representation within MongoDB, which is a best practice for maintaining data integrity and consistency.
+
+## Project Setup
+
+### Step 1: Create a new Project
+
+Open your terminal and create a new project with `nest-cli`
+
+```bash
+nest new [project-name]
+```
+
+Choose any name for your project.
+
+### Step 2: Install Dependencies
+
+Install these two packages to connect with MongoDB database
+
+```bash
+pnpm install @nestjs/mongoose mongoose
+```
 
 ## Connect with MongoDB
 
@@ -105,28 +123,36 @@ import { HydratedDocument } from 'mongoose';
 
 export type SongDocument = HydratedDocument<Song>;
 
-@Schema()
+@Schema({ timestamps: true }) // Adds createdAt and updatedAt automatically
 export class Song {
   @Prop({
     required: true,
+    trim: true,
   })
   title: string;
+
   @Prop({
     required: true,
   })
   releasedDate: Date;
+
   @Prop({
     required: true,
+    trim: true,
   })
-  duration: string;
+  duration: string; // Keep as string for formats like "3:45" or "03:45"
 
+  @Prop({
+    required: false, // Made optional since it wasn't marked as required
+    default: '',
+  })
   lyrics: string;
 }
 
 export const SongSchema = SchemaFactory.createForClass(Song);
 ```
 
-1. The `SongDocument` is utilized upon injecting the Model into the `SongService`. It is a NestJS-specific approach to apply TypeScript interfaces for Mongoose models, promoting type safety and IntelliSense in the service layer.
+1. The `SongDocument` is utilized upon injecting the Model into the `SongService`. It is a `NestJS`-specific approach to apply TypeScript interfaces for Mongoose models, promoting type safety and IntelliSense in the service layer.
 2. Applying the `@Schema()` decorator designates a class as a schema definition, associating the Song class with a MongoDB collection named songs. This decorator is part of `NestJS`'s `Mongoose` integration, which simplifies working with `MongoDB` by automatically pluralizing the model name for the collection.
 3. The `@Prop()` decorator is employed to declare a property within the document. This decorator is crucial in defining the schema's data structure and ensuring the fields align with the intended types in the MongoDB collection.
 4. `SchemaFactory` is tasked with generating the bare schema definition. Employing `console.log` on `SongSchema` will reveal the structured outcome, demonstrating the schema's conversion to a format that `Mongoose` can use to enforce document structure in `MongoDB`.
@@ -143,14 +169,52 @@ nest g mo modules/songs && nest g co modules/songs && nest g s modules/songs
 
 ### Step 2: Create `CreateSongDTO`
 
+**Install Dependencies**
+
+```json
+pnpm i class-transformer class-validator
+```
+
 `songs/dto/create-song.dto.ts`
 
 ```tsx
+import { Transform } from 'class-transformer';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+
 export class CreateSongDTO {
+  @IsNotEmpty()
+  @IsString()
   title: string;
+
+  @IsNotEmpty()
+  @IsDateString() // Validates ISO date string format
+  // @Transform(({ value }) => new Date(value as string)) // Transforms string to Date
+  @Transform(({ value }): Date | undefined => {
+    if (value == null) return undefined;
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date format');
+      }
+      return date;
+    }
+    if (value instanceof Date) return value;
+    throw new Error('Invalid date format');
+  })
   releasedDate: Date;
-  duration: Date;
-  lyrics: string;
+
+  @IsNotEmpty()
+  @IsString()
+  duration: string; // Fixed: was Date, should be string for duration like "3:45"
+
+  @IsOptional()
+  @IsString()
+  lyrics?: string; // Made optional with ? since it's not required in schema
 }
 ```
 
@@ -277,7 +341,7 @@ The application's functionality can tested. See if it works.
 - `Method` : `GET`
 - `URL` : [`http://localhost:3000/songs`](http://localhost:3000/songs)
 
-## Get Single Record
+## Get a Record
 
 ### Step 1: Create a `findById` method in `SongService`
 
@@ -293,7 +357,7 @@ async findById(id: string): Promise<Song> {
 }
 ```
 
-### Step 2: Create `findOne` Route in the Controller
+### Step 2: Create `findOne` Route in `SongController`
 
 The creation of a `findOne` route in the controller is implemented to facilitate the retrieval of a single song entity by its unique identifier. In `NestJS`, best practices suggest utilizing decorators like `@Get`with the route path and `@Param` to capture route parameters, enhancing the modularity and declarative nature of routing mechanisms.
 
@@ -314,39 +378,6 @@ The application's functionality can tested. See if it works.
 - `Method` : `GET`
 - `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
 
-## Delete a Record
-
-### Step 1: Create a delete song method in `SongService`
-
-A delete song method within `SongService` can be established to handle removal operations for songs. Ensuring the method is idempotent, meaning it can be called multiple times without changing the result beyond the initial application, is considered a best practice for robust `API` design in `NestJS`applications.
-
-```tsx
-  async delete(id: string): Promise<DeleteResult> {
-    return this.songModel.deleteOne({ _id: id });
-  }
-```
-
-### Step 2: Create a Route for deleting a song in `SongController`
-
-A route for deleting a song is established through a controller's method decorated with `NestJS`'s `@Delete()` decorator, which maps `HTTP DELETE` requests to the corresponding service function. In terms of best practices, implementing soft deletion, where records are flagged as inactive rather than removed from the database, can be advantageous for data recovery and audit purposes.
-
-```tsx
-  @Delete(':id')
-  delete(
-    @Param('id')
-    id: string,
-  ): Promise<DeleteResult> {
-    return this.songService.delete(id);
-  }
-```
-
-### Step 3: Test the Application
-
-The application's functionality can tested. See if it works.
-
-- `Method` : `DELETE`
-- `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
-
 ## Update a Record
 
 ### Step 1: Create `UpdateSongDTO`
@@ -354,12 +385,66 @@ The application's functionality can tested. See if it works.
 `songs/dto/update-song.dto.ts`
 
 ```tsx
-export class CreateSongDTO {
+import { Transform } from 'class-transformer';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+
+export class UpdateSongDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   title?: string;
+
+  @IsOptional()
+  @IsDateString()
+  // @Transform(({ value }) => new Date(value as string))
+  @Transform(({ value }): Date | undefined => {
+    if (value == null) return undefined;
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date format');
+      }
+      return date;
+    }
+    if (value instanceof Date) return value;
+    throw new Error('Invalid date format');
+  })
   releasedDate?: Date;
-  duration?: Date;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  duration?: string;
+
+  @IsOptional()
+  @IsString()
   lyrics?: string;
 }
+```
+
+**`OR` using `@nestjs/mapped-types` package**
+
+Then you can use `PartialType` to automatically make all fields from a base DTO optional
+
+```bash
+**pnpm add @nestjs/mapped-types**
+```
+
+Create another DTO object to update the record.
+
+`songs/dto/update-song.dto.ts`
+
+```tsx
+import { PartialType } from '@nestjs/mapped-types';
+
+import { CreateSongDTO } from './create-song.dto';
+
+export class UpdateSongDTO extends PartialType(CreateSongDTO) {}
 ```
 
 ### Step 2: Create a update song method in `SongService`
@@ -412,4 +497,37 @@ export class CreateSongDTO {
 The application's functionality can tested. See if it works.
 
 - `Method` : `PUT`
+- `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
+
+## Delete a Record
+
+### Step 1: Create a delete song method in `SongService`
+
+A delete song method within `SongService` can be established to handle removal operations for songs. Ensuring the method is idempotent, meaning it can be called multiple times without changing the result beyond the initial application, is considered a best practice for robust `API` design in `NestJS`applications.
+
+```tsx
+  async delete(id: string): Promise<DeleteResult> {
+    return this.songModel.deleteOne({ _id: id });
+  }
+```
+
+### Step 2: Create a Route for deleting a song in `SongController`
+
+A route for deleting a song is established through a controller's method decorated with `NestJS`'s `@Delete()` decorator, which maps `HTTP DELETE` requests to the corresponding service function. In terms of best practices, implementing soft deletion, where records are flagged as inactive rather than removed from the database, can be advantageous for data recovery and audit purposes.
+
+```tsx
+  @Delete(':id')
+  delete(
+    @Param('id')
+    id: string,
+  ): Promise<DeleteResult> {
+    return this.songService.delete(id);
+  }
+```
+
+### Step 3: Test the Application
+
+The application's functionality can tested. See if it works.
+
+- `Method` : `DELETE`
 - `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
