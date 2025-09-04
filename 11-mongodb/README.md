@@ -276,3 +276,40 @@ The application's functionality can tested. See if it works.
 
 - `Method` : `GET`
 - `URL` : [`http://localhost:3000/songs`](http://localhost:3000/songs)
+
+## Get Single Record
+
+### Step 1: Create a `findById` method in `SongService`
+
+The creation of a `findById` method within `SongService` serves to encapsulate the logic for retrieving a specific song by its identifier. Implementing such methods aligns with `NestJS`'s philosophy of modular services, ensuring that each service has a single responsibility and that the application remains scalable and maintainable. It is considered a best practice to abstract database queries within services to isolate them from controllers, thereby promoting clean separation of concerns.
+
+```tsx
+async findById(id: string): Promise<Song> {
+  const song = await this.songModel.findById(id);
+  if (!song) {
+    throw new NotFoundException(`Song with id ${id} not found`);
+  }
+  return song;
+}
+```
+
+### Step 2: Create `findOne` Route in the Controller
+
+The creation of a `findOne` route in the controller is implemented to facilitate the retrieval of a single song entity by its unique identifier. In `NestJS`, best practices suggest utilizing decorators like `@Get`with the route path and `@Param` to capture route parameters, enhancing the modularity and declarative nature of routing mechanisms.
+
+```tsx
+@Get(':id')
+findOne(
+  @Param('id')
+  id: string,
+): Promise<Song> {
+  return this.songService.findById(id);
+}
+```
+
+### Step 3: Test the Application
+
+The application's functionality can tested. See if it works.
+
+- `Method` : `GET`
+- `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
