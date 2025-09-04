@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   IsDateString,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -35,4 +36,9 @@ export class CreateSongDTO {
   @IsOptional()
   @IsString()
   lyrics?: string; // Made optional with ? since it's not required in schema
+
+  @IsNotEmpty()
+  @IsString()
+  @IsMongoId()
+  album: string; // MongoDB ObjectId as string
 }

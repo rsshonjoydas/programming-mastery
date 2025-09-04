@@ -10,6 +10,7 @@ import { AppService } from '@/app.service';
 import { TypedConfigService } from '@/common/config/config.service';
 import { appConfig } from '@/common/config/configuration';
 import { validateEnvironment } from '@/common/config/env.validation';
+import { AlbumModule } from '@/modules/albums/albums.module';
 import { SongsModule } from '@/modules/songs/songs.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { SongsModule } from '@/modules/songs/songs.module';
       socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
     }),
     SongsModule,
+    AlbumModule,
   ],
   controllers: [AppController],
   providers: [AppService, TypedConfigService],

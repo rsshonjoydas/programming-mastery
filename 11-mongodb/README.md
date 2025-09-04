@@ -531,3 +531,211 @@ The application's functionality can tested. See if it works.
 
 - `Method` : `DELETE`
 - `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
+
+## Populate
+
+This lesson covers the addition of relations between two models in Mongoose, illustrating the association where each song is linked to a single album and each album may encompass numerous songs. The demonstration focuses on Mongoose's populate feature, which is pivotal for managing document relationships in MongoDB, akin to JOINs in relational databases. `NestJS` supports Mongoose's features directly through its dedicated @nestjs/mongoose package, and employing populate is a common practice to efficiently retrieve related documents.
+
+### Step 1: Create an album schema
+
+A new folder named albums must be created to house the schema file. This action conforms to `NestJS`'s modular architecture, where separating concerns by feature enhances maintainability and scalability—a best practice in software development.
+
+`src/modules/albums/schemas/album.schema.ts`
+
+```tsx
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+
+import { Song } from '@/modules/songs/schemas/song.schema';
+
+export type AlbumDocument = HydratedDocument<Album>;
+
+@Schema({
+  timestamps: true,
+  collection: 'albums',
+  versionKey: false, // This removes __v entirely
+  // toJSON: {
+  // virtuals: true,
+  //   transform: (doc: Document, ret: Record<string, any>) => {
+  //     delete ret.__v;
+  //     return ret;
+  //   },
+  // transform: (doc, ret) => {
+  //   delete (ret as any).__v;
+  //   return ret;
+  // },
+  // },
+  toObject: { virtuals: true },
+})
+export class Album {
+  @Prop({
+    required: true,
+  })
+  title: string;
+
+  @Prop({ type: [Types.ObjectId], ref: 'songs' }) //1
+  songs: Song[];
+}
+
+export const AlbumSchema = SchemaFactory.createForClass(Album);
+```
+
+1. The songs property is defined in the Album model with the type specified as an array of MongoDB `ObjectID`s, intended to store references to the IDs of the song collection within the albums table.
+2. The ref attribute establishes a reference to the songs collection, enabling the creation of relational data structures within a MongoDB database, a feature `NestJS` leverages through its Mongoose module integration.
+
+As a best practice, it is recommended to clearly document such relationships within the code to improve maintainability and provide clarity for future development efforts. Additionally, ensuring that the `ObjectID`s used in references are validated for their format can prevent runtime errors and maintain data integrity.
+
+### Step 2: Add a relation in the song schema
+
+Inclusion of a relation within the song schema can be executed through the use of decorators that define the relationship type, such as `@OneToMany` or `@ManyToOne`, which `NestJS` leverages from `TypeORM`. This practice encapsulates the relational aspect directly within the entity, thus promoting a clear and maintainable structure within the application’s domain model. Best practice dictates careful planning of entity relationships to optimize query performance and database integrity.
+
+`song.schema.ts`
+
+```tsx
+@Prop({
+  type: Types.ObjectId,
+  ref: Album.name,
+})
+album: Album;
+```
+
+`create-song.dto.ts`
+
+```tsx
+  @IsNotEmpty()
+  @IsString()
+  @IsMongoId()
+  album: string; // MongoDB ObjectId as string
+```
+
+### Step 3: Create album DTO
+
+```tsx
+import {
+  ArrayMinSize,
+  IsArray,
+  IsMongoId,
+  IsNotEmpty,
+  IsString,
+} from 'class-validator';
+
+export class CreateAlbumDTO {
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsMongoId({ each: true })
+  songs: string[];
+}
+```
+
+### Step 4: Create Album Module, Controller and Service
+
+The creation of an Album Module, Controller, and Service in a `NestJS` application encapsulates the album-related functionalities, aligning with the framework's modular architecture. Implementing each as a separate entity follows `NestJS`'s single-responsibility principle, ensuring that the application remains scalable and maintainable. As a best practice, defining strict interfaces and DTOs (Data Transfer Objects) for service methods enhances type safety and validation, which is a crucial aspect of robust software design.
+
+```bash
+nest g mo modules/album && nest g co modules/album && nest g s modules/album
+```
+
+`albums.service.ts`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+
+import { CreateAlbumDTO } from './dto/create-album.dto';
+import { Album, AlbumDocument } from './schemas/album.schema';
+
+import { Song } from '@/modules/songs/schemas/song.schema';
+
+@Injectable()
+export class AlbumService {
+  constructor(
+    @InjectModel(Album.name)
+    private readonly albumModel: Model<AlbumDocument>,
+  ) {}
+
+  async createAlbum(createAlbumDTO: CreateAlbumDTO): Promise<Album> {
+    return this.albumModel.create(createAlbumDTO);
+  }
+
+  async findAlbums() {
+    return this.albumModel.find().populate('songs', null, Song.name);
+  }
+}
+```
+
+The populate method is applied on the album model to retrieve all songs associated with each album. Utilizing this feature in NestJS effectively allows for eager loading of related entities, which streamlines data retrieval processes. It is considered a good practice to carefully manage such operations to optimize query performance and maintain data integrity.
+
+`albums.controller.ts`
+
+```tsx
+import { Body, Controller, Get, Post } from '@nestjs/common';
+
+import { AlbumService } from './albums.service';
+import { CreateAlbumDTO } from './dto/create-album.dto';
+import { Album } from './schemas/album.schema';
+
+@Controller('albums')
+export class AlbumController {
+  constructor(private albumService: AlbumService) {}
+
+  @Post()
+  create(
+    @Body()
+    createAlbumDTO: CreateAlbumDTO,
+  ): Promise<Album> {
+    return this.albumService.createAlbum(createAlbumDTO);
+  }
+
+  @Get()
+  find(): Promise<Album[]> {
+    return this.albumService.findAlbums();
+  }
+}
+```
+
+`albums.module.ts`
+
+```tsx
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+
+import { AlbumController } from './albums.controller';
+import { AlbumService } from './albums.service';
+import { Album, AlbumSchema } from './schemas/album.schema';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: Album.name, schema: AlbumSchema }]),
+  ],
+  controllers: [AlbumController],
+  providers: [AlbumService],
+})
+export class AlbumModule {}
+```
+
+### Step 5: Test the Application
+
+The application's functionality can tested. See if it works.
+
+`Create Album`
+
+- `Method` : `POST`
+- `URL` : <http://localhost:3000/albums>
+- `Body`:
+
+  ```json
+  {
+    "title": "Dance",
+    "songs": ["68b9a64249379400150737c9", "68b9b84b7b09010c385130ab"]
+  }
+  ```
+
+`Get Albums`
+
+- `Method` : `GET`
+- `URL` : <http://localhost:3000/albums>
