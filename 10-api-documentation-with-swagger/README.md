@@ -46,3 +46,32 @@ async function bootstrap() {
 1. The `DocumentBuilder` is utilized to configure the title, description, and version of the API documentation.
 2. This document is then created with the help of the `SwaggerModule`, which is specific to `NestJS` for API design and testing.
 3. Subsequently, the Swagger document is hosted at the `/api` endpoint, making it accessible via <http://localhost:3000/api>, offering a visual interface for interacting with the API. As a best practice, maintaining up-to-date and comprehensive Swagger documentation ensures that APIs are understandable and usable, aiding in both development and API consumption.
+
+## Configure Routes
+
+### Step 1: Add auth Tags in the Auth Controller (Optional)
+
+In the initial step, authentication tags are added to the Auth Controller. This labeling within `NestJS` facilitates Swagger documentation generation, which helps to categorically group and distinguish authentication endpoints. It is considered a best practice to annotate controllers with appropriate Swagger tags to enhance API documentation and maintain clarity for developers interfacing with the backend services.
+
+```tsx
+@ApiTags('auth')
+export class AuthController {}
+```
+
+Now you will see all the auth routes in the auth section
+
+### Step 2: Add API Operation and Response for the Signup flow
+
+In Step 2, `ApiOperation` and `ApiResponse` annotations are added for the signup process. These annotations, part of the Swagger module in `NestJS`, facilitate API documentation by describing the operation and its possible responses, enhancing understandability for developers and end-users alike. It is considered good practice to thoroughly document API endpoints with such annotations, as this can significantly improve the development experience and future maintenance.
+
+```tsx
+ @ApiOperation({ summary: 'Register new user' })
+ @ApiResponse({
+   status: 201,
+   description: 'It will return the user in the response',
+ })
+ signup(){}
+```
+
+The `@ApiOperation` decorator instructs Swagger to generate documentation for a particular endpoint, enriching the API's interactive exploration interface. Meanwhile, `@ApiResponse` defines the expected response for an endpoint, including the status code, which improves clarity and client-side handling expectations. `NestJS`'s integration with Swagger simplifies API documentation and it's
+considered best practice to use these decorators to provide clear, self-documenting API endpoints that align with `OpenAPI` specifications.

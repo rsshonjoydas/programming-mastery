@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { instanceToPlain } from 'class-transformer';
 import { UpdateResult } from 'typeorm';
 
@@ -16,12 +17,18 @@ import { UsersService } from '@/modules/users/users.service';
 import { CurrentUser } from '@/shared/decorators/current-user.decorator';
 
 @Controller('auth')
+// @ApiTags('auth') // Optional
 export class AuthController {
   constructor(
     private userService: UsersService,
     private authService: AuthService,
   ) {}
   @Post('register')
+  @ApiOperation({ summary: 'Register new user' })
+  @ApiResponse({
+    status: 201,
+    description: 'It will return the user in the response',
+  })
   signup(
     @Body()
     createUserDTO: CreateUserDTO,
