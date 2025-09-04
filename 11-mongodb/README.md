@@ -92,3 +92,41 @@ export class AppModule implements OnModuleInit {
 ```
 
 The `forRoot()` method in `NestJS`'s Mongoose module requires a configuration object analogous to the one used in `mongoose.connect()` from the `Mongoose` package. This method provides a streamlined approach to configuring the database connection at the root module level, ensuring all sub-modules can interact with the database consistently. A best practice entails validating the database connection parameters and handling connection errors gracefully to maintain the stability of the application.
+
+## Create Schema
+
+In Mongoose, everything commences with a Schema, which maps to a MongoDB collection and dictates the structure of the documents in that collection. Schemas serve to establish Models, with Models being accountable for the creation and retrieval of documents from the MongoDB database. Adopting Schemas and Models aligns with `NestJS`'s modular approach, enhancing maintainability and promoting adherence to an application's defined data architecture. Utilizing Mongoose with `NestJS` adheres to a best practice of encapsulating database interactions, which improves code reusability and testability.
+
+`src/modules/songs/schemas/song.schema.ts`
+
+```tsx
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument } from 'mongoose';
+
+export type SongDocument = HydratedDocument<Song>;
+
+@Schema()
+export class Song {
+  @Prop({
+    required: true,
+  })
+  title: string;
+  @Prop({
+    required: true,
+  })
+  releasedDate: Date;
+  @Prop({
+    required: true,
+  })
+  duration: string;
+
+  lyrics: string;
+}
+
+export const SongSchema = SchemaFactory.createForClass(Song);
+```
+
+1. The `SongDocument` is utilized upon injecting the Model into the `SongService`. It is a NestJS-specific approach to apply TypeScript interfaces for Mongoose models, promoting type safety and IntelliSense in the service layer.
+2. Applying the `@Schema()` decorator designates a class as a schema definition, associating the Song class with a MongoDB collection named songs. This decorator is part of `NestJS`'s `Mongoose` integration, which simplifies working with `MongoDB` by automatically pluralizing the model name for the collection.
+3. The `@Prop()` decorator is employed to declare a property within the document. This decorator is crucial in defining the schema's data structure and ensuring the fields align with the intended types in the MongoDB collection.
+4. `SchemaFactory` is tasked with generating the bare schema definition. Employing `console.log` on `SongSchema` will reveal the structured outcome, demonstrating the schema's conversion to a format that `Mongoose` can use to enforce document structure in `MongoDB`.
