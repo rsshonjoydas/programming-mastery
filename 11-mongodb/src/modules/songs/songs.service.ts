@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { DeleteResult, Model } from 'mongoose';
 
 import { CreateSongDTO } from './dto/create-song.dto';
 import { Song, SongDocument } from './schemas/song.schema';
@@ -27,5 +27,9 @@ export class SongsService {
       throw new NotFoundException(`Song with id ${id} not found`);
     }
     return song;
+  }
+
+  async delete(id: string): Promise<DeleteResult> {
+    return this.songModel.deleteOne({ _id: id });
   }
 }

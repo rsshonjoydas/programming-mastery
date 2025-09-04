@@ -313,3 +313,36 @@ The application's functionality can tested. See if it works.
 
 - `Method` : `GET`
 - `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
+
+## Delete a Record
+
+### Step 1: Create a delete song method in `SongService`
+
+A delete song method within `SongService` can be established to handle removal operations for songs. Ensuring the method is idempotent, meaning it can be called multiple times without changing the result beyond the initial application, is considered a best practice for robust `API` design in `NestJS`applications.
+
+```tsx
+  async delete(id: string): Promise<DeleteResult> {
+    return this.songModel.deleteOne({ _id: id });
+  }
+```
+
+### Step 2: Create a Route for deleting a song in `SongController`
+
+A route for deleting a song is established through a controller's method decorated with `NestJS`'s `@Delete()` decorator, which maps `HTTP DELETE` requests to the corresponding service function. In terms of best practices, implementing soft deletion, where records are flagged as inactive rather than removed from the database, can be advantageous for data recovery and audit purposes.
+
+```tsx
+  @Delete(':id')
+  delete(
+    @Param('id')
+    id: string,
+  ): Promise<DeleteResult> {
+    return this.songService.delete(id);
+  }
+```
+
+### Step 3: Test the Application
+
+The application's functionality can tested. See if it works.
+
+- `Method` : `DELETE`
+- `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)

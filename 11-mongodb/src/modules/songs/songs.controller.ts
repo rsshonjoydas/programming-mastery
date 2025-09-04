@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { DeleteResult } from 'mongoose';
 
 import { CreateSongDTO } from './dto/create-song.dto';
 import { Song } from './schemas/song.schema';
@@ -27,5 +28,13 @@ export class SongsController {
     id: string,
   ): Promise<Song> {
     return this.songService.findById(id);
+  }
+
+  @Delete(':id')
+  delete(
+    @Param('id')
+    id: string,
+  ): Promise<DeleteResult> {
+    return this.songService.delete(id);
   }
 }
