@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { DeleteResult, Model } from 'mongoose';
 
 import { CreateSongDTO } from './dto/create-song.dto';
+import { UpdateSongDTO } from './dto/update-song.dto';
 import { Song, SongDocument } from './schemas/song.schema';
 
 @Injectable()
@@ -27,6 +28,23 @@ export class SongsService {
       throw new NotFoundException(`Song with id ${id} not found`);
     }
     return song;
+  }
+
+  async update(id: string, updateSongDto: UpdateSongDTO): Promise<Song> {
+    const updatedSong = await this.songModel.findByIdAndUpdate(
+      id,
+      updateSongDto,
+      {
+        new: true, // Return updated document
+        runValidators: true, // Run schema validators
+      },
+    );
+
+    if (!updatedSong) {
+      throw new NotFoundException(`Song with id ${id} not found`);
+    }
+
+    return updatedSong;
   }
 
   async delete(id: string): Promise<DeleteResult> {

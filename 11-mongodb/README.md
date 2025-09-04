@@ -346,3 +346,70 @@ The application's functionality can tested. See if it works.
 
 - `Method` : `DELETE`
 - `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
+
+## Update a Record
+
+### Step 1: Create `UpdateSongDTO`
+
+`songs/dto/update-song.dto.ts`
+
+```tsx
+export class CreateSongDTO {
+  title?: string;
+  releasedDate?: Date;
+  duration?: Date;
+  lyrics?: string;
+}
+```
+
+### Step 2: Create a update song method in `SongService`
+
+```tsx
+  async update(id: string, updateSongDto: UpdateSongDTO): Promise<Song> {
+    const updatedSong = await this.songModel.findByIdAndUpdate(
+      id,
+      updateSongDto,
+      {
+        new: true, // Return updated document
+        runValidators: true, // Run schema validators
+      },
+    );
+
+    if (!updatedSong) {
+      throw new NotFoundException(`Song with id ${id} not found`);
+    }
+
+    return updatedSong;
+  }
+```
+
+### Step 3: Create a Route for updating a song in `SongController`
+
+```tsx
+  // PUT - Complete update (replaces entire document)
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @Param('id') id: string,
+    @Body() updateSongDto: UpdateSongDTO,
+  ): Promise<Song> {
+    return this.songService.update(id, updateSongDto);
+  }
+
+  // PATCH - Partial update (updates only provided fields)
+  // @Patch(':id')
+  // @HttpCode(HttpStatus.OK)
+  // async partialUpdate(
+  //   @Param('id') id: string,
+  //   @Body() updateSongDto: UpdateSongDTO,
+  // ): Promise<Song> {
+  //   return this.songService.update(id, updateSongDto);
+  // }
+```
+
+### Step 4: Test the Application
+
+The application's functionality can tested. See if it works.
+
+- `Method` : `PUT`
+- `URL` : [`http://localhost:3000/songs/:id`](http://localhost:3000/songs)
