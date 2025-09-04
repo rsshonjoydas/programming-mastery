@@ -75,3 +75,90 @@ In Step 2, `ApiOperation` and `ApiResponse` annotations are added for the signup
 
 The `@ApiOperation` decorator instructs Swagger to generate documentation for a particular endpoint, enriching the API's interactive exploration interface. Meanwhile, `@ApiResponse` defines the expected response for an endpoint, including the status code, which improves clarity and client-side handling expectations. `NestJS`'s integration with Swagger simplifies API documentation and it's
 considered best practice to use these decorators to provide clear, self-documenting API endpoints that align with `OpenAPI` specifications.
+
+## Show User Schema
+
+### Step 1: Add `@ApiProperty` in the User Entity
+
+In the User Entity, the `@ApiProperty` decorator is added to enhance Swagger documentation automatically. This inclusion is a NestJS-specific feature that aids in generating interactive API documentation, and it exemplifies the practice of incorporating documentation as a part of the coding process to maintain clarity and up-to-date API information for developers.
+
+```tsx
+import { ApiProperty } from '@nestjs/swagger';
+
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @ApiProperty({
+    example: 'John',
+    description: 'Provide the first name of the user',
+  })
+  @Column()
+  firstName: string;
+
+  @ApiProperty({
+    example: 'Doe',
+    description: 'provide the lastName of the user',
+  })
+  @Column()
+  lastName: string;
+
+  @ApiProperty({
+    example: 'john_doe@gmail.com',
+    description: 'Provide the email of the user',
+  })
+  @Column({ unique: true })
+  email: string;
+
+  @ApiProperty({
+    example: 'test123#@',
+    description: 'Provide the password of the user',
+  })
+  @Column()
+  @Exclude()
+  password: string;
+
+  /**
+   * A user can create many playLists
+   */
+  @OneToMany(() => Playlist, (playList) => playList.user)
+  playLists: Playlist[];
+
+  @Column({ nullable: true, type: 'text' })
+  twoFASecret: string | null;
+
+  @Column({ default: false, type: 'boolean' })
+  enable2FA: boolean;
+
+  @Column()
+  apiKey: string;
+}
+```
+
+The `@ApiProperty` decorator enhances swagger documentation by explicitly declaring the user schema. Utilizing this decorator is considered a best practice within NestJS for API documentation, as it provides clear and interactive API endpoints for testing and inspection.
+
+### Step 2: Register the Swagger plugin in `nest-cli.json`
+
+To register the Swagger plugin, it is specified in the `nest-cli.json` file. This NestJS-specific step integrates Swagger automatically, generating API documentation and providing interactive testing utilities. Employing this plugin is a recommended practice as it promotes standardized API documentation and simplifies developer onboarding and frontend integration efforts.
+
+```json
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "plugins": [
+      {
+        "name": "@nestjs/swagger",
+        "options": {
+          "introspectComments": true
+        }
+      }
+    ]
+  }
+}
+```
+
+The plugin array must be created, followed by the registration of the `@nestjs/swagger` package as a plugin. This step is crucial for enabling Swagger documentation in a `NestJS` application, a best practice for automatically generating interactive API documentation that enhances developer experience and API usability.
