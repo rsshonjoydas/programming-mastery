@@ -162,3 +162,65 @@ To register the Swagger plugin, it is specified in the `nest-cli.json` file. Thi
 ```
 
 The plugin array must be created, followed by the registration of the `@nestjs/swagger` package as a plugin. This step is crucial for enabling Swagger documentation in a `NestJS` application, a best practice for automatically generating interactive API documentation that enhances developer experience and API usability.
+
+## User Authentication
+
+### Step 1: Add API Operation for Login
+
+The addition of an API operation for login is achieved through creating an authentication controller with a dedicated login route. Implementing this within `NestJS` typically involves using Guards and Strategies, leveraging Passport.js under the hood for a robust and secure authentication process. As a best practice, it is advisable to use environment variables for sensitive information such as secret keys and to apply validation pipelines to ensure the integrity of user input before processing authentication.
+
+`auth.controller.ts`
+
+```tsx
+  @Post('login')
+  @ApiOperation({ summary: 'Login user' })
+  @ApiResponse({
+    status: 200,
+    description: 'It will give you the access_token in the response',
+  })
+  login()
+```
+
+### Step 2: Enable Bearer Auth
+
+`main.ts`
+
+```tsx
+app.useGlobalPipes(new ValidationPipe());
+//Configure the swagger module here
+const config = new DocumentBuilder()
+  .setTitle('Spotify Clone')
+  .setDescription('The Spotify Clone Api documentation')
+  .setVersion('1.0')
+  // Enable Bearer Auth here
+  .addBasicAuth(
+    {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      name: 'JWT',
+      description: 'Enter JWT token',
+      in: 'header',
+    },
+    'JWT-auth', // We will use this Bearer Auth with the JWT-auth name on the
+  )
+  .build();
+
+const document = SwaggerModule.createDocument(app, config);
+SwaggerModule.setup('api', app, document);
+```
+
+### Step 3: Apply `ApiBearerAuth` on the protected Route
+
+`app.controller.ts`
+
+```tsx
+  @Get('profile')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  getProfile(@Request() req: AuthenticatedRequest): AuthenticatedUser {
+    return req.user;
+  }
+```
+
+The `@ApiBearerAuth` decorator has been applied to `getProfile` within `AppController`, designating it as a protected route that returns the user profile in the response. In `NestJS`, securing routes with decorators aligns with the framework's philosophy of declarative programming, enhancing readability and security- a practice in line with advanced software design principles.
