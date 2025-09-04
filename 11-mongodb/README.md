@@ -130,3 +130,115 @@ export const SongSchema = SchemaFactory.createForClass(Song);
 2. Applying the `@Schema()` decorator designates a class as a schema definition, associating the Song class with a MongoDB collection named songs. This decorator is part of `NestJS`'s `Mongoose` integration, which simplifies working with `MongoDB` by automatically pluralizing the model name for the collection.
 3. The `@Prop()` decorator is employed to declare a property within the document. This decorator is crucial in defining the schema's data structure and ensuring the fields align with the intended types in the MongoDB collection.
 4. `SchemaFactory` is tasked with generating the bare schema definition. Employing `console.log` on `SongSchema` will reveal the structured outcome, demonstrating the schema's conversion to a format that `Mongoose` can use to enforce document structure in `MongoDB`.
+
+## Save Record in MongoDB
+
+The record must be saved in the MongoDB collection, necessitating the creation of a `POST` endpoint to store the songs. Utilizing `NestJS`'s `@Controller` and `@Post` decorators, the endpoint can be efficiently set up, showcasing the framework's streamlined approach to REST API development. It is considered a best practice to abstract the interaction with MongoDB into a service, which allows for cleaner controllers and easier maintenance of database operations.
+
+### Step 1: Create Songs Module, Controller, and Service
+
+```bash
+nest g mo modules/songs && nest g co modules/songs && nest g s modules/songs
+```
+
+### Step 2: Create `CreateSongDTO`
+
+`songs/dto/create-song.dto.ts`
+
+```tsx
+export class CreateSongDTO {
+  title: string;
+  releasedDate: Date;
+  duration: Date;
+  lyrics: string;
+}
+```
+
+### Step 3: Add a create method in `SongsService`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+
+import { CreateSongDTO } from './dto/create-song.dto';
+import { Song, SongDocument } from './schemas/song.schema';
+
+@Injectable()
+export class SongsService {
+  constructor(
+    @InjectModel(Song.name)
+    private readonly songModel: Model<SongDocument>,
+  ) {}
+
+  async create(createSongDTO: CreateSongDTO): Promise<Song> {
+    const song = await this.songModel.create(createSongDTO);
+    return song;
+  }
+}
+```
+
+### Step 4: Add a create method in `SongsController`
+
+```tsx
+import { Body, Controller, Post } from '@nestjs/common';
+
+import { CreateSongDTO } from './dto/create-song.dto';
+import { SongsService } from './songs.service';
+
+@Controller('songs')
+export class SongsController {
+  constructor(private songService: SongsService) {}
+
+  @Post()
+  create(
+    @Body()
+    createSongDTO: CreateSongDTO,
+  ) {
+    return this.songService.create(createSongDTO);
+  }
+}
+```
+
+1. Registration of the song model within the `SongsModule` allows for its injection into the service, demonstrating `NestJS`'s modular design that promotes loose coupling and high cohesion.
+2. Utilization of the `SongDocument` type within the song schema file ensures that the object adheres to the defined schema, a practice that enforces type safety and reduces runtime errors.
+3. The `songModel` incorporates a method to persist records in MongoDB, which illustrates the encapsulation of database operations within models, a practice that enhances maintainability and scalability of the application.
+
+### Step 5: Register the Song Model in `SongsModule`
+
+```tsx
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+
+import { Song, SongSchema } from './schemas/song.schema';
+import { SongsController } from './songs.controller';
+import { SongsService } from './songs.service';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: Song.name, schema: SongSchema }]), //1
+  ],
+  controllers: [SongsController],
+  providers: [SongsService],
+})
+export class SongsModule {}
+```
+
+The `MongooseModule` employs the `forFeature()` method to configure itself, allowing specific models to be registered within the current scope. It is a `NestJS`-specific mechanism that ensures model encapsulation and modularity, a recommended approach for maintaining clean and manageable database-related code.
+
+### Step 6: Test the Application
+
+The application's functionality can tested. See if it works.
+
+- `Method` : `POST`
+- `URL` : [`http://localhost:3000/songs`](http://localhost:3000/songs)
+- `Body` :
+
+  ```json
+  {
+    "title": "Lasting Lover",
+    "releasedDate": "2023-05-11",
+    "duration": "02:33",
+    "lyrics": "I don't know why I can't quite get you out my sight You're always just behind"
+  }
+  ```
