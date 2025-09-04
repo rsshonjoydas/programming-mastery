@@ -242,3 +242,37 @@ The application's functionality can tested. See if it works.
     "lyrics": "I don't know why I can't quite get you out my sight You're always just behind"
   }
   ```
+
+## Get All Records
+
+### Step 1: Create a new find method in `SongService`
+
+A new find method is crafted within the `SongService`, encapsulating the logic for retrieving song data. As a best practice within `NestJS`, this method should be designed as a service that can be injected into controllers, promoting a clean separation of concerns and enhanced testability.
+
+`songs.service.ts`
+
+```tsx
+async find(): Promise<Song[]> {
+  return this.songModel.find();
+}
+```
+
+### Step 2: Create a Route in `SongController`
+
+A route in the `SongController` is established to handle specific music-related requests. In `NestJS`, it's advisable to use decorators like `@Get`, `@Post`, or `@Put` to clearly define the purpose and nature of the route, enhancing the readability and structure of the code.
+
+`songs.controller.ts`
+
+```tsx
+@Get()
+find(): Promise<Song[]> {
+  return this.songService.find();
+}
+```
+
+### Step 3: Test the Application
+
+The application's functionality can tested. See if it works.
+
+- `Method` : `GET`
+- `URL` : [`http://localhost:3000/songs`](http://localhost:3000/songs)
