@@ -1,0 +1,307 @@
+# Dependency Injection
+
+## **Custom Providers**
+
+- Constructor-based dependency injection is utilized for injecting instances, often service providers like `SongsService`, into classes using `constructor(private songsService: SongService)`. This approach is in contrast to frameworks like Express, where dependency injection is not natively supported and often requires third-party libraries for similar functionality. As a best practice, constructor-based injection is preferred for its explicitness and ease of testing.
+- When the Nest `IoC (Inversion of Control)` container creates an instance of `SongsController`, it scans for any dependencies, such as `SongsService`. Upon identifying the dependency, Nest instantiates `SongsService`, caches it, and returns the instance, reusing the existing one if already cached. This differs from Express, which generally lacks a built-in `IoC`container, requiring manual instantiation or third-party solutions. Leveraging caching for service instances can lead to performance optimization.
+
+## Injection providers
+
+### **Standard Providers**
+
+These are classes that get instantiated by the `NestJS` dependency injection system. Unlike in Express, where dependency injection must often be implemented manually or through third-party libraries, `NestJS` provides this feature natively. As a best practice, leverage standard providers for services that require instantiation.
+
+`song.module.ts`
+
+```tsx
+@Module({
+  controllers: [SongsController],
+  providers: [SongsService],
+})
+```
+
+This is the standard provider technique, you have used in our application. You can also convert the above syntax into this syntax
+
+`song.module.ts`
+
+```tsx
+@Module({
+  controllers: [SongsController],
+  providers: [
+    {
+      provide: SongsService,
+      useClass: SongsService,
+    },
+  ],
+})
+```
+
+### **Value Providers**
+
+These are hard-coded values or configurations injected into other classes. This feature can replace the need for environment variables or configuration files, which in frameworks like Express, would typically be managed by separate packages. Using value providers for constants and configuration settings contributes to code maintainability.
+
+`songs.module.ts`
+
+```tsx
+const mockSongsService = {
+  findAll() {
+    return [
+      {
+        id: 1,
+        title: 'Lasting love',
+        artists: ['Siagla', 'Martin', 'John'],
+      },
+    ];
+  },
+};
+
+@Module({
+  controllers: [SongsController],
+  providers: [
+    {
+      provide: SongsService,
+      useValue: mockSongsService,
+    },
+  ],
+})
+```
+
+The `useValue` syntax is useful for injecting a constant value, putting an external library into the Nest container, or replacing a real implementation with a mock object. Let’s say you’d like to force Nest to use a mock `SongsService`for testing purposes.
+
+When you send `GET` request to localhost:3000/songs it will run the`findAll()` method from `mockSongsService` instead of original `SongsService`
+
+### **Non-Class based Provider Tokens**
+
+These are custom tokens that can be used to inject values or services. Unlike in frameworks like Django, which relies more on function-based views and doesn’t have a direct equivalent, `NestJS` allows greater flexibility in dependency injection. Use custom tokens judiciously to avoid overly complex dependency graphs.
+
+`src/common/constants/connection.ts`
+
+```tsx
+export type Connection = {
+  CONNECTION_STRING: string;
+  DB: string;
+  DB_NAME: string;
+};
+
+export const connection: Connection = {
+  CONNECTION_STRING: 'postgresql://admin:password@localhost:5432/nestjs-db',
+  DB: 'POSTGRES',
+  DB_NAME: 'TEST',
+};
+```
+
+To inject an object as a dependency, `useValue` can be utilized. This feature distinguishes `NestJS` from frameworks like Express, where manual constructor-based injection is often the norm. In the case at hand, a new file named `connection.ts` has been created, containing a connection object with `CONNECTION_STRING`, `DB` and `DB_NAME`. As a best practice, keeping connection configurations in separate files and importing them as needed ensures a modular and easily configurable application setup.
+
+`songs.module.ts`
+
+```tsx
+@Module({
+  controllers: [SongsController],
+  providers: [
+    SongsService,
+    // Non class based providers
+    // You can use it to add constant values
+    {
+      provide: 'CONNECTION',
+      useValue: connection,
+    },
+  ],
+})
+export class SongsModule {}
+```
+
+The connection object can now be injected into any controller or service within the `SongsModule`. This contrasts with frameworks like Express, where dependency injection isn’t native and often requires third-party libraries like `Awilix` for similar functionality. As a best practice, isolating database connections in dedicated provider files ensures more modular and maintainable code, thereby facilitating easier unit testing and separation of concerns.
+
+`Method 1` → `songs.service.ts`
+
+```tsx
+**@Injectable()
+export class SongsService {
+  constructor(
+    @Inject('CONNECTION')
+    connection: Connection,
+  ) {
+    console.log('connection string', connection.CONNECTION_STRING);
+  }
+
+ // previous code...
+}**
+```
+
+`Method 2` → `songs.controller.ts`
+
+```tsx
+@Controller('songs')
+export class SongsController {
+  constructor(
+    private songsService: SongsService,
+    @Inject('CONNECTION')
+    private connection: Connection,
+  ) {
+    console.log(
+      `This is connection string ${this.connection.CONNECTION_STRING}`,
+    );
+  }
+  // previous code...
+}
+```
+
+I have injected this connection object into `SongsService` or `SongsController` by using the `@Inject` decorator with the token name `CONNECTION`
+
+### **Class Providers:** `useClass`
+
+These allow for the substitution of one class provider with another, providing polymorphism. This is distinct from Express, where such abstraction might require more manual factory patterns. Employing `useClass`is beneficial for achieving code reusability and flexibility.
+
+`app.module.ts`
+
+```tsx
+@Module({
+  imports: [SongsModule],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    {
+      provide: DevConfigService,
+      useClass: DevConfigService,
+    },
+  ],
+})
+```
+
+A `DevConfigService` class has been created and registered as a provider. With this setup, `AppModule` is capable of injecting this provider as a dependency into any class for utilization. In contrast to Express, which typically relies on third-party libraries like `dotenv`for configuration management, `NestJS` offers a more integrated way to handle configurations through custom service providers. As a best practice, encapsulating configuration logic within a dedicated service class enables easier testing and maintenance, adhering to the principle of Separation of Concerns.
+
+Make a `DevConfigService.ts` file inside `src/common/providers/` this directory
+
+`DevConfigService.ts`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class DevConfigService {
+  DB_HOST = 'localhost';
+  getDB_HOST() {
+    return this.DB_HOST;
+  }
+}
+```
+
+Inject `DevConfigService` in `AppService`
+
+`app.service.ts`
+
+```tsx
+import { Injectable } from '@nestjs/common';
+import { DevConfigService } from './common/providers/DevConfigService';
+
+@Injectable()
+export class AppService {
+  constructor(private devConfigService: DevConfigService) {}
+  getHello(): string {
+    return `Hello I am learning Nest.js Fundamentals ${this.devConfigService.getDB_HOST()}`;
+  }
+}
+```
+
+The `DevConfigService` has been injected into `AppService`, and the `getDBHOST` method from `DevConfigService` is invoked. Unlike in Express, where dependency injection is not natively supported and might require third-party libraries, `NestJS` simplifies this with built-in Dependency Injection, leading to more modular and testable code. As a best practice, environment-specific configurations like database host details should be abstracted away into separate configuration services, ensuring that the code adheres to the Twelve-Factor App methodology.
+
+### **Non-service Providers**
+
+These are providers that aren’t necessarily tied to a service and may provide utility functions, for example. This granularity is generally not available in basic Express setups and would usually require additional modules or utilities. Incorporating non-service providers can aid in keeping the codebase DRY (Don’t Repeat Yourself).
+
+A provider in `NestJS` has the flexibility to supply any value, making it a versatile component for dependency injection. The `useFactory` syntax facilitates the dynamic creation of providers, a feature that sets it apart from Express, which often relies on external libraries like `awilix` or manual constructor injection for similar functionality. As a best practice, isolating complex business logic within factory providers can lead to more modular and testable code.
+
+`app.module.ts`
+
+```tsx
+const devConfig = {
+  port: 3000,
+};
+
+const proConfig = {
+  port: 4000,
+};
+
+@Module({
+  imports: [SongsModule],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    {
+      provide: DevConfigService,
+      useClass: DevConfigService,
+    },
+    {
+      provide: 'CONFIG',
+      useFactory: () => {
+        return process.env.NODE_ENV === 'development' ? devConfig : proConfig;
+      },
+    },
+  ],
+})
+```
+
+Two objects, `devConfig` and `proConfig`, have been created. Dynamic value assignment is possible through the `useFactory` function. Unlike Express, where environment-specific configurations often require separate JSON or JS files, `NestJS` allows for more streamlined, inline dynamic configuration. As a best practice, isolating configuration logic in dedicated modules or services fosters maintainability and scalability.
+
+`app.service.ts`
+
+```tsx
+@Injectable()
+export class AppService {
+  constructor(
+    private devConfigService: DevConfigService,
+    @Inject('CONFIG')
+    private config: { port: string },
+  ) {}
+  getHello(): string {
+    return `Hello I am learning Nest.js Fundamentals ${this.devConfigService.getDB_HOST()} PORT = ${this.config.port}`;
+  }
+}
+```
+
+I have injected the `CONFIG` provider inside the `AppService`.
+
+Exploration of all six techniques will take place, each elucidated through an example.
+
+We are going to play around with all these 6 techniques. I will explain each technique with the help of an example
+
+## **Injection Scopes**
+
+Provider scopes in `NestJS` can be categorized into three main types:
+
+### DEFAULT
+
+In this scope, a single instance of the provider is shared across the entire application, a feature similar to Express’s singleton services but made explicit in `NestJS`. When the application requests this provider a second time, `NestJS` retrieves it from an internal cache, a mechanism that enhances application performance. As a best practice, caching providers to minimize computational overhead is advisable.
+
+### REQUEST
+
+Contrary to the DEFAULT scope, a new instance of the provider is created for each incoming request. While this provides better isolation, it’s a different model from Express’s middleware-based architecture where request-level isolation usually involves function scope. This scope is ideal for scenarios where each request may need a provider with state that shouldn’t affect other requests.
+
+### TRANSIENT
+
+Transient providers are unique in that they are not shared across different consumers. When a transient provider is injected, the consumer receives a new, dedicated instance, unlike in Express where this level of injection granularity is not native and often must be manually managed. Employing transient providers is good practice when state isolation between consumers is crucial.
+
+---
+
+**Example:**
+
+`Step 1.` → `songs.service.ts`
+
+```tsx
+@Injectable({
+  scope: Scope.TRANSIENT
+})
+```
+
+`Step 2` → `songs.controller.ts`
+
+```tsx
+@Controller({
+  path: 'songs',
+  scope: Scope.REQUEST,
+})
+```
+
+A new instance of `SongsController` is created for every incoming request, offering a more stateless architecture. In contrast, frameworks like Express use a singleton pattern for controllers, thus reusing the same instance for all requests, which can introduce state-related issues. Adopting a stateless architecture is a best practice for improving scalability and maintainability.
+
+Debugging dependencies may present challenges, but understanding the usage of different scopes is essential. Unlike Express, which lacks a built-in `DI (Dependency Injection)`system, `NestJS` has various scopes for dependency injection, making it more flexible for complex use cases. Utilizing the correct scope for dependencies is considered a best practice, as it improves performance and the overall architecture.
