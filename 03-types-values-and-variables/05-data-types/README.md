@@ -1,58 +1,68 @@
 # JavaScript Data Types
 
-JavaScript has **8 data types** divided into two categories:
+## JavaScript Data Types (8 Total)
 
-## Primitive Data Types (7)
+### Primitive Types (7) - Immutable
 
-**1. String**
+1. **String** - Text data in quotes: `"hello"`, `'world'`, `` `template` ``
+2. **Number** - All numeric values: `42`, `3.14`, `NaN`, `Infinity`
+3. **BigInt** - Large integers beyond 2^53 - 1: `123456789012345678901234567890n`
+4. **Boolean** - Logical values: `true`, `false`
+5. **Undefined** - Declared but unassigned: `let x; // undefined`
+6. **Null** - Intentional absence of value: `let x = null;`
+7. **Symbol** - Unique identifiers (ES6+): `Symbol('description')`
 
-- Text data enclosed in quotes
-- `"hello"`, `'world'`, `` `template` ``
+### Object Types (1) - Mutable
 
-**2. Number**
+**Object** - Collections of key-value pairs, includes:
 
-- All numeric values (integers and decimals)
-- `42`, `3.14`, `NaN`, `Infinity`
+- Plain objects (unordered named values): `{}`
+- Arrays (ordered numbered values): `[]`
+- Functions: `function() {}`
+- Special objects: Set, Map, typed arrays, RegExp, Date, Error
+- Functions and classes (specialized objects)
 
-**3. BigInt**
+## Type Conversion
 
-- For integers larger than 2^53 - 1
-- `123456789012345678901234567890n`
+**Liberal Conversion Rules:**
+JavaScript automatically converts values from one type to another when needed (e.g., string expected but number given → converts to string)
 
-**4. Boolean**
+### Equality & Conversion
 
-- Logical values
-- `true`, `false`
+- **`==` (loose equality)**: Performs type conversions | _Deprecated in practice_
+- **`===` (strict equality)**: NO type conversions | _Preferred/recommended_
 
-**5. Undefined**
+## Key Characteristics
 
-- Variable declared but not assigned a value
-- `let x; // x is undefined`
+### Mutability
 
-**6. Null**
+- **Primitives**: Immutable (cannot change the value itself)
+- **Objects/Arrays**: Mutable (can change properties/elements)
+- **Strings**: Immutable despite seeming like character arrays
 
-- Intentional absence of value
-- `let x = null;`
+### Methods
 
-**7. Symbol**
+- Only objects technically have methods
+- Numbers, strings, booleans, symbols **behave as if** they have methods
+- **null and undefined CANNOT have methods invoked on them**
 
-- Unique, immutable identifier (ES6+)
-- `Symbol('description')`
+### Dynamic Typing
 
-## Non-Primitive Data Type (1)
+- Variables can hold any data type
+- Types can change during runtime
+- Use `typeof` to check types (note: `typeof null` returns `"object"` - known quirk)
 
-**8. Object**
+### Storage
 
-- Collections of key-value pairs
-- Includes: plain objects, arrays, functions, dates, etc.
-- `{}`, `[]`, `function() {}`, `new Date()`
+- **Primitives**: Stored by value
+- **Objects**: Stored by reference
 
-## Key Concepts
+### Memory Management
 
-**Dynamic Typing**: Variables can hold any data type and can change types during runtime.
+- Automatic garbage collection
+- Values become reclaimable when no longer reachable
 
-**Type Checking**: Use `typeof` operator to check types (note: `typeof null` returns `"object"`, which is a known quirk).
+### Variables
 
-**Primitives vs Objects**: Primitives are immutable and stored by value. Objects are mutable and stored by reference.
-
-That covers the essentials! Need details on any specific type?
+- Declared with `const` or `let` (modern) or `var` (older)
+- **Untyped**: Don't specify what kind of values will be assigned
